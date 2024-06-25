@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning New Words</title>
+     <!-- Toastr CSS -->
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+     <!-- Toastr JS -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <p><h1>Learning new words</h1></p>
+            <br/>
+            <div class="score">
+                <label>
+                    <input type="checkbox" id="englishMode" checked> English mode
+                </label>
+            </div>
+            <p>Score <span id="score">0</span></p>
+        </div>
+        <div class="content">
+            <div class="word-card">
+                <p id="wordCard">x</p>
+            </div>
+            <div class="input-answer">
+                <input type="text" id="inputAnswer" placeholder="Input answer">
+            </div>
+            <div class="button">
+                <button id="submitAnswer">Trả lời</button>
+            </div>
+        </div>
+    </div>
+    <div id="effectContainer"></div>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thêm từ mới</title>
+     <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <!-- Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    ...
+    <link rel="stylesheet" href="style_add.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Thêm từ mới</h1>
+        </div>
+        <div class="content">
+            <div class="add-word">
+                <div class="dropdown-container">
+                    <select id="sessionDropdown">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                    <button id = "seach_word" onclick="searchWords()">Search</button>
+                </div>
+                <div class="input-pair">
+                    <input type="text" id="english" placeholder="Tiếng Anh">
+                    <input type="text" id="vietnamese" placeholder="Tiếng Việt">
+                </div>
+                <div class="button">
+                    <button onclick="addWord()">Thêm</button>
+                </div>
+            </div>
+            <div class="word-list">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tiếng Anh</th>
+                            <th>Tiếng Việt</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td>
+                            </td>
+                        </tr>
+                        <!-- More rows as needed -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="sessionPopup" class="popup">
+        <div class="popup-content">
+            <span class="close" onclick="closePopup()">&times;</span>
+            <h2>Thêm Session mới</h2>
+            <input type="text" id="newSessionName" placeholder="Session Name">
+            <button onclick="saveSession()">Save</button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('/get-sessions')
+                .then(response => response.json())
+                .then(data => {
+                    const dropdown = document.getElementById('sessionDropdown');
+                    data.sessions.forEach(session => {
+                        const option = document.createElement('option');
+                        option.value = session;
+                        option.text = session;
+                        dropdown.add(option);
+                    });
+                    const addOption = document.createElement('option');
+                    addOption.value = 'add-session';
+                    addOption.text = 'Add Session';
+                    dropdown.add(addOption);
+                });
+
+            document.getElementById('sessionDropdown').addEventListener('change', (event) => {
+                if (event.target.value === 'add-session') {
+                    openPopup();
+                }
+            });
+
+            // Function to handle clicks on the "Edit" and "Delete" buttons
+            document.querySelector('.word-list tbody').addEventListener('click', function(event) {
+                if (event.target.classList.contains('edit')) {
+                    const row = event.target.closest('tr');
+                    const english = row.children[0].textContent;
+                    const vietnamese = row.children[1].textContent;
+                    openEditPopup(english, vietnamese, row);
+                } else if (event.target.classList.contains('delete')) {
+                    const row = event.target.closest('tr');
+                    const english = row.children[0].textContent;
+                    const vietnamese = row.children[1].textContent;
+                    deleteWord(english, vietnamese, row);
+                }
+            });
+        });
+
+        function openPopup() {
+            document.getElementById('sessionPopup').style.display = 'block';
+        }
+
+        function closePopup() {
+            document.getElementById('sessionPopup').style.display = 'none';
+        }
+
+        function addWord() {
+            const english = document.getElementById('english').value;
+            const vietnamese = document.getElementById('vietnamese').value;
+            const session = document.getElementById('sessionDropdown').value;
+
+            fetch('/add-word', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ english, vietnamese, session })
+            }).then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toastr.success('Từ mới đã được thêm!');
+                    // Clear the input fields
+                    document.getElementById('english').value = '';
+                    document.getElementById('vietnamese').value = '';
+                } else {
+                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
+                }
+            });
+        }
+
+        function saveSession() {
+            const newSessionName = document.getElementById('newSessionName').value;
+            fetch('/add-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ session: newSessionName })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      toastr.success('Session mới đã được thêm!');
+                      const dropdown = document.getElementById('sessionDropdown');
+                      const option = document.createElement('option');
+                      option.value = newSessionName;
+                      option.text = newSessionName;
+                      dropdown.add(option,dropdown.length-1);
+                      dropdown.value = newSessionName;
+                      closePopup();
+                  } else {
+                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
+                  }
+              });
+        }
+    
+        function searchWords() {
+            const selectedSession = document.getElementById('sessionDropdown').value;
+            if (selectedSession === 'add-session') {
+                toastr.error('Vui lòng chọn một session hợp lệ để tìm kiếm.');
+                return;
+            }
+
+            fetch(`/search-words?keyw=${encodeURIComponent(selectedSession)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const wordListBody = document.querySelector('.word-list tbody');
+                        wordListBody.innerHTML = ''; // Clear existing rows
+
+                        data.words.forEach(word => {
+                            const row = document.createElement('tr');
+                            const englishCell = document.createElement('td');
+                            const vietnameseCell = document.createElement('td');
+                            const actionsCell = document.createElement('td');
+
+                            englishCell.textContent = word.english;
+                            vietnameseCell.textContent = word.vietnamese;
+                            actionsCell.innerHTML = '<button class="edit">Sửa</button><button class="delete">Xóa</button>';
+
+                            row.appendChild(englishCell);
+                            row.appendChild(vietnameseCell);
+                            row.appendChild(actionsCell);
+
+                            wordListBody.appendChild(row);
+                        });
+                    } else {
+                        toastr.infor('Không tìm thấy từ nào cho session này.');
+                    }
+                });
+        }
+
+        function openEditPopup(english, vietnamese, row) {
+            const editPopup = document.createElement('div');
+            editPopup.classList.add('popup');
+            editPopup.innerHTML = `
+                <div class="popup-content">
+                    <span class="close" onclick="closeEditPopup(this)">&times;</span>
+                    <h2>Chỉnh sửa từ</h2>
+                    <input type="text" id="editEnglish" value="${english}">
+                    <input type="text" id="editVietnamese" value="${vietnamese}">
+                    <br/>
+                    <button id="buttonEditWord" onclick="saveEditWord('${english}', '${vietnamese}', this)">Save</button>
+                </div>
+            `;
+            document.body.appendChild(editPopup);
+            editPopup.style.display = 'block';
+        }
+
+        function closeEditPopup(element) {
+            const popup = element.closest('.popup');
+            document.body.removeChild(popup);
+        }
+
+        function saveEditWord(oldEnglish, oldVietnamese, button) {
+            const newEnglish = document.getElementById('editEnglish').value;
+            const newVietnamese = document.getElementById('editVietnamese').value;
+
+            fetch('/edit-word', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ oldEnglish, oldVietnamese, newEnglish, newVietnamese })
+            }).then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toastr.success('Từ đã được cập nhật!');
+                    searchWords();
+                    closeEditPopup(button);
+                } else {
+                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
+                }
+            });
+        }
+
+        function deleteWord(english, vietnamese, row) {
+            fetch('/delete-word', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ english, vietnamese })
+            }).then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toastr.success('Từ đã được xóa!');
+                    row.remove();
+                } else {
+                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
