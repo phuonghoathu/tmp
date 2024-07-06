@@ -1,130 +1,259 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const sessionName = urlParams.get('sessionName');
-    let words = [];
-    let currentWord = {};
-    let score = 0;
-    console.log(sessionName)
+    const dataUrl = urlParams.get('data');
+    
+    fetch(`/quiz?data=${encodeURIComponent(dataUrl)}`)
+        .then(response => response.json())
+        .then(data => {
+            initializeGame(data);
+        })
+        .catch(error => console.error('Error fetching data:', error));
 
-    if (sessionName) {
-        fetch(`/search-words?keyw=${encodeURIComponent(sessionName)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    words = data.words;
-                    console.log(words)
-                    displayRandomWord();
-                } else {
-                    toastr.error('Could not retrieve words. Please try again.');
-                }
-            })
-            .catch(error => {
-                toastr.error('An error occurred while fetching words.');
-                console.error('Error fetching words:', error);
-            });
-    }
-
-    document.getElementById('submitAnswer').addEventListener('click', checkAnswer);
-
-    function displayRandomWord() {
-        if (words.length === 0) {
-            handleCompletion();
-            return;
-        }
-        currentWord = words.splice(Math.floor(Math.random() * words.length), 1)[0];
+    function initializeGame(data) {
         const wordCard = document.getElementById('wordCard');
-        wordCard.textContent = englishMode ? currentWord.english : currentWord.vietnamese;
-        applyRandomEffect(wordCard);
-    }
+        const inputAnswer = document.getElementById('inputAnswer');
+        const submitAnswer = document.getElementById('submitAnswer');
+        const skipButton = document.getElementById('skip');
+        const hintButton = document.getElementById('hint');
+        const scoreElement = document.getElementById('score');
+        const hintModal = document.getElementById('hintModal');
+        const hintContent = document.getElementById('hintContent');
+        const closeModal = document.getElementsByClassName('close')[0];
 
-    function checkAnswer() {
-        const answer = document.getElementById('inputAnswer').value.trim();
-        const englishMode = document.getElementById('englishMode').checked;
-        const correctAnswer = englishMode ? currentWord.vietnamese : currentWord.english;
+        let score = 0;
+        let currentWordIndex = 0;
+        let currentType = ""
+        let timeLeft = data.time ? parseInt(data.time*60) : null;
+        let hintCount = 0;
 
-        if (answer.toLowerCase() === correctAnswer.toLowerCase()) {
-            score += 10;
-            toastr.success('Correct! +10 points');
-        } else {
-            score -= 5;
-            toastr.error('Incorrect! -5 points');
+ ///START TIME PROCESS    
+        let progressBar = document.querySelector('.e-c-progress');
+        let indicator = document.getElementById('e-indicator');
+        let pointer = document.getElementById('e-pointer');
+        let length = Math.PI * 2 * 100;
+
+        progressBar.style.strokeDasharray = length;
+
+        function update(value, timePercent) {
+            var offset = - length - length * value / (timePercent);
+            progressBar.style.strokeDashoffset = offset; 
+            pointer.style.transform = `rotate(${360 * value / (timePercent)}deg)`; 
+        };
+
+        //circle ends
+        const displayOutput = document.querySelector('.display-remain-time')
+
+        let intervalTimer;
+        let wholeTime = timeLeft; // manage this to set the whole time 
+        let isStarted = false;
+
+        if (wholeTime != null) {
+            update(wholeTime,wholeTime); //refreshes progress bar
+            displayTimeLeft(wholeTime);
         }
 
-        document.getElementById('score').textContent = score;
-        document.getElementById('inputAnswer').value = '';
-        displayRandomWord();
-    }
-
-    function handleCompletion() {
-        const submitButton = document.getElementById('submitAnswer');
-        submitButton.disabled = true;
-        if (score > 0) {
-            showCelebration();
-        } else {
-            showSadFace();
-        }
-    }
-
-    function applyRandomEffect(element) {
-        const effects = ['slideInLeft', 'zoomIn', 'fadeIn','heartbeat' ,'flipInX','fadeOut','pulse','rotateIn','bounceIn'];
-        const randomEffect = effects[Math.floor(Math.random() * effects.length)];
-        console.log(randomEffect)
-        element.classList.add('animated', randomEffect);
-        setTimeout(() => {
-            element.classList.remove('animated', randomEffect);
-        }, 1000);
-    }
-
-    function showCelebration() {
-        const duration = 2 * 1000;
-        const end = Date.now() + duration;
-
-        (function frame() {
-            confetti({
-                particleCount: 2,
-                angle: 60,
-                spread: 55,
-                origin: { x: 0 }
-            });
-            confetti({
-                particleCount: 2,
-                angle: 120,
-                spread: 55,
-                origin: { x: 1 }
-            });
-
-            if (Date.now() < end) {
-                requestAnimationFrame(frame);
+        function changeWholeTime(seconds){
+            if ((wholeTime + seconds) > 0){
+                wholeTime += seconds;
+                update(wholeTime,wholeTime);
             }
-        }());
-    }
+        }
 
-    function showSadFace() {
-        const duration = 2 * 1000; // 2 seconds
-        const end = Date.now() + duration;
-    
-        (function frame() {
-            const effectContainer = document.getElementById('effectContainer');
-            const sadFace = document.createElement('div');
-            sadFace.classList.add('sad-face');
-            sadFace.textContent = ':(';
-    
-            // Randomize the position and add it to the effectContainer
-            sadFace.style.position = 'absolute';
-            sadFace.style.top = `${Math.random() * 100}%`;
-            sadFace.style.left = `${Math.random() * 100}%`;
-            effectContainer.appendChild(sadFace);
-    
-            sadFace.classList.add('animated', 'fadeIn');
-            setTimeout(() => {
-                sadFace.classList.remove('animated', 'fadeIn');
-                effectContainer.removeChild(sadFace);
+        function timer (seconds){ //counts time, takes seconds
+            let remainTime = Date.now() + (seconds * 1000);
+            displayTimeLeft(seconds);
+            
+            intervalTimer = setInterval(function(){
+                timeLeft = Math.round((remainTime - Date.now()) / 1000);
+                if(timeLeft < 0){
+                    //Show result
+                    console.log("Time out")
+                    clearInterval(intervalTimer);
+                    return ;
+                }
+                displayTimeLeft(timeLeft);
             }, 1000);
-    
-            if (Date.now() < end) {
-                requestAnimationFrame(frame);
+        }
+
+        function displayTimeLeft (timeLeft){ //displays time on the input
+            let minutes = Math.floor(timeLeft / 60);
+            let seconds = timeLeft % 60;
+            let displayString = `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            displayOutput.textContent = displayString;
+            update(timeLeft, wholeTime);
+        }
+        if (wholeTime != null) {
+            timer(wholeTime);
+            isStarted = true;
+        }
+ ///END TIME PROCESS       
+        if (data.skip) {
+            skipButton.style.display = 'block';
+        }
+
+        if (data.hint) {
+            hintButton.style.display = 'block';
+        }
+
+        displayWord();
+
+        submitAnswer.addEventListener('click', () => {
+            checkAnswer();
+        });
+
+        skipButton.addEventListener('click', () => {
+            skipWord();
+        });
+
+        hintButton.addEventListener('click', () => {
+            showHint();
+        });
+
+        closeModal.addEventListener('click', () => {
+            hintModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target == hintModal) {
+                hintModal.style.display = 'none';
             }
-        }());
+        });
+
+        function displayWord() {
+            const word = data.words[currentWordIndex];
+            if(data.type === 'random') {
+                ran = Math.round(Math.random())
+                if(ran == 0)
+                    currentType = 'en-vn';
+                else
+                    currentType = 'vn-en';
+            } else {
+                currentType = data.type;
+            }
+            wordCard.textContent = currentType === 'en-vn' ? word.english : word.vietnamese;
+        }
+
+        function checkAnswer() {
+            const word = data.words[currentWordIndex];
+            const correctAnswer = currentType === 'en-vn' ? word.vietnamese : word.english;
+
+            if (inputAnswer.value.toLowerCase() === correctAnswer.toLowerCase()) {
+                updateScore(word.level, true);
+                if (data.correctDisplay) {
+                    alert('Correct! The answer is: ' + correctAnswer);
+                }
+            } else {
+                updateScore(word.level, false);
+                if (data.correctDisplay) {
+                    alert('Incorrect! The correct answer was: ' + correctAnswer);
+                }
+            }
+
+            inputAnswer.value = '';
+            currentWordIndex = (currentWordIndex + 1) % data.words.length;
+            displayWord();
+        }
+
+        function updateScore(level, isCorrect, isHint=false, isSkip=false) {
+            let scoreChange = 0;
+            if (isHint) {
+                if (level === 'Easy') {
+                    scoreChange = -parseInt(data.hintMinusScoreEasy);
+                } else if (level === 'Medium') {
+                    scoreChange = -parseInt(data.hintMinusScoreMedium);
+                } else if (level === 'Hard') {
+                    scoreChange = -parseInt(data.hintMinusScoreHard);
+                }
+            } else {
+                if (isSkip) {
+                    if (level === 'Easy') {
+                        scoreChange = -parseInt(data.skipMinusScoreEasy);
+                    } else if (level === 'Medium') {
+                        scoreChange = -parseInt(data.skipMinusScoreMedium);
+                    } else if (level === 'Hard') {
+                        scoreChange = -parseInt(data.skipMinusScoreHard);
+                    }
+                } else {
+                    if (isCorrect) {
+                        if (level === 'Easy') {
+                            scoreChange = parseInt(data.rightPlusScoreEasy);
+                        } else if (level === 'Medium') {
+                            scoreChange = parseInt(data.rightPlusScoreMedium);
+                        } else if (level === 'Hard') {
+                            scoreChange = parseInt(data.rightPlusScoreHard);
+                        }
+                    } else {
+                        if (level === 'Easy') {
+                            scoreChange = -parseInt(data.wrongMinusScoreEasy);
+                        } else if (level === 'Medium') {
+                            scoreChange = -parseInt(data.wrongMinusScoreMedium);
+                        } else if (level === 'Hard') {
+                            scoreChange = -parseInt(data.wrongMinusScoreHard);
+                        }
+                    }
+                }
+            }
+
+            score += scoreChange;
+            scoreElement.textContent = score;
+        }
+
+        function skipWord() {
+            const word = data.words[currentWordIndex];
+            updateScore(word.level, false, false, true);
+
+            inputAnswer.value = '';
+            currentWordIndex = (currentWordIndex + 1) % data.words.length;
+            displayWord();
+        }
+
+        function showHint() {
+            hintModal.style.display = 'block';
+            const word = data.words[currentWordIndex];
+            const correctAnswer = currentType === 'en-vn' ? word.vietnamese : word.english;
+            const words = correctAnswer.split('');
+
+            hintContent.innerHTML = '';
+            //hintContent.style.textAlign = 'center'
+            words.forEach(word => {
+                const wordElement = document.createElement('span');
+                if(word == ' ') {
+                    wordElement.textContent = " ";
+                    wordElement.style.margin = '10px';
+                    wordElement.style.padding = '10px';
+                    wordElement.style.border = '1px solid #ddd';
+                    wordElement.style.borderRadius = '4px';
+                    hintContent.appendChild(wordElement);
+                } else {
+                    wordElement.textContent = "_";
+                    wordElement.style.margin = '10px';
+                    wordElement.style.padding = '10px';
+                    wordElement.style.border = '1px solid #ddd';
+                    wordElement.style.borderRadius = '4px';
+                    wordElement.style.cursor = 'pointer';
+                    wordElement.style.backgroundColor = 'gray';
+    
+                    wordElement.addEventListener('click', () => {
+                        hintCount++;
+                        if (hintCount > parseInt(data.maxHint)) {
+                            hintButton.disabled = true;
+                            hintButton.style.backgroundColor = "gray"
+                        } else {
+                            updateScore(data.words[currentWordIndex].level,true,true, false)
+                            wordElement.textContent = word;
+                            wordElement.style.backgroundColor = 'greenyellow';
+                        }
+                        
+                    });
+    
+                    hintContent.appendChild(wordElement);
+                }
+            });
+        }
+
+        function stopGame() {
+            alert('Time is up!');
+            // Handle stopping the game and displaying the final score or results.
+        }
     }
 });

@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thêm từ mới</title>
-     <!-- Toastr CSS -->
+    <!-- Toastr CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <!-- Toastr JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    ...
     <link rel="stylesheet" href="style_add.css">
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -23,12 +24,24 @@
                     <select id="sessionDropdown">
                         <!-- Options will be populated by JavaScript -->
                     </select>
-                    <button id = "seach_word" onclick="searchWords()">Search</button>
+                    <input id="session_encode" type="hidden" value="">
+                    <button id="seach_word" class="button_base" onclick="searchWords()">Search</button>
+                    <button id="get_link" class="button_base" onclick="getLink()">Get Link</button>
                 </div>
                 <div class="input-pair">
                     <input type="text" id="english" placeholder="Tiếng Anh">
                     <input type="text" id="vietnamese" placeholder="Tiếng Việt">
                 </div>
+                <div class="input-pair">
+                    <select id="level">
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                    <input type="file" id="imageUpload" accept="image/*">
+                </div>
+                <div><textarea class="input-single" style="text-align: left; width: 93%; padding: 10px 20px;" id="description" placeholder="Mô tả"></textarea></div>
+                
                 <div class="button">
                     <button onclick="addWord()">Thêm</button>
                 </div>
@@ -39,6 +52,9 @@
                         <tr>
                             <th>Tiếng Anh</th>
                             <th>Tiếng Việt</th>
+                            <th>Level</th>
+                            <th>Image</th>
+                            <th>Mô tả</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -46,8 +62,10 @@
                         <tr>
                             <td></td>
                             <td></td>
-                            <td>
-                            </td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
                         </tr>
                         <!-- More rows as needed -->
                     </tbody>
@@ -59,204 +77,102 @@
         <div class="popup-content">
             <span class="close" onclick="closePopup()">&times;</span>
             <h2>Thêm Session mới</h2>
-            <input type="text" id="newSessionName" placeholder="Session Name">
-            <button onclick="saveSession()">Save</button>
+            <input type="text" id="newSessionName" class="input-single" placeholder="Session Name">
+            <button class="button_base" onclick="saveSession()">Save</button>
         </div>
     </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            fetch('/get-sessions')
-                .then(response => response.json())
-                .then(data => {
-                    const dropdown = document.getElementById('sessionDropdown');
-                    data.sessions.forEach(session => {
-                        const option = document.createElement('option');
-                        option.value = session;
-                        option.text = session;
-                        dropdown.add(option);
-                    });
-                    const addOption = document.createElement('option');
-                    addOption.value = 'add-session';
-                    addOption.text = 'Add Session';
-                    dropdown.add(addOption);
-                });
 
-            document.getElementById('sessionDropdown').addEventListener('change', (event) => {
-                if (event.target.value === 'add-session') {
-                    openPopup();
-                }
-            });
+    <div id="myModal_gen_link" class="popup">
+        <div class="popup-content" style="text-align: left;">
+            <span class="close" onclick="closePopup_getlink()">&times;</span>
+            <form id="form">
+                <select id="modalSessionDropdown"></select> <br>
+                <label for="numberQuestion">Number Question (Empty for all):</label>
+                <input type="text" id="numberQuestion" class="input-single" name="numberQuestion"
+                    placeholder="All"><br><br>
 
-            // Function to handle clicks on the "Edit" and "Delete" buttons
-            document.querySelector('.word-list tbody').addEventListener('click', function(event) {
-                if (event.target.classList.contains('edit')) {
-                    const row = event.target.closest('tr');
-                    const english = row.children[0].textContent;
-                    const vietnamese = row.children[1].textContent;
-                    openEditPopup(english, vietnamese, row);
-                } else if (event.target.classList.contains('delete')) {
-                    const row = event.target.closest('tr');
-                    const english = row.children[0].textContent;
-                    const vietnamese = row.children[1].textContent;
-                    deleteWord(english, vietnamese, row);
-                }
-            });
-        });
-
-        function openPopup() {
-            document.getElementById('sessionPopup').style.display = 'block';
-        }
-
-        function closePopup() {
-            document.getElementById('sessionPopup').style.display = 'none';
-        }
-
-        function addWord() {
-            const english = document.getElementById('english').value;
-            const vietnamese = document.getElementById('vietnamese').value;
-            const session = document.getElementById('sessionDropdown').value;
-
-            fetch('/add-word', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ english, vietnamese, session })
-            }).then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toastr.success('Từ mới đã được thêm!');
-                    // Clear the input fields
-                    document.getElementById('english').value = '';
-                    document.getElementById('vietnamese').value = '';
-                } else {
-                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
-                }
-            });
-        }
-
-        function saveSession() {
-            const newSessionName = document.getElementById('newSessionName').value;
-            fetch('/add-session', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ session: newSessionName })
-            }).then(response => response.json())
-              .then(data => {
-                  if (data.success) {
-                      toastr.success('Session mới đã được thêm!');
-                      const dropdown = document.getElementById('sessionDropdown');
-                      const option = document.createElement('option');
-                      option.value = newSessionName;
-                      option.text = newSessionName;
-                      dropdown.add(option,dropdown.length-1);
-                      dropdown.value = newSessionName;
-                      closePopup();
-                  } else {
-                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
-                  }
-              });
-        }
-    
-        function searchWords() {
-            const selectedSession = document.getElementById('sessionDropdown').value;
-            if (selectedSession === 'add-session') {
-                toastr.error('Vui lòng chọn một session hợp lệ để tìm kiếm.');
-                return;
-            }
-
-            fetch(`/search-words?keyw=${encodeURIComponent(selectedSession)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const wordListBody = document.querySelector('.word-list tbody');
-                        wordListBody.innerHTML = ''; // Clear existing rows
-
-                        data.words.forEach(word => {
-                            const row = document.createElement('tr');
-                            const englishCell = document.createElement('td');
-                            const vietnameseCell = document.createElement('td');
-                            const actionsCell = document.createElement('td');
-
-                            englishCell.textContent = word.english;
-                            vietnameseCell.textContent = word.vietnamese;
-                            actionsCell.innerHTML = '<button class="edit">Sửa</button><button class="delete">Xóa</button>';
-
-                            row.appendChild(englishCell);
-                            row.appendChild(vietnameseCell);
-                            row.appendChild(actionsCell);
-
-                            wordListBody.appendChild(row);
-                        });
-                    } else {
-                        toastr.infor('Không tìm thấy từ nào cho session này.');
-                    }
-                });
-        }
-
-        function openEditPopup(english, vietnamese, row) {
-            const editPopup = document.createElement('div');
-            editPopup.classList.add('popup');
-            editPopup.innerHTML = `
-                <div class="popup-content">
-                    <span class="close" onclick="closeEditPopup(this)">&times;</span>
-                    <h2>Chỉnh sửa từ</h2>
-                    <input type="text" id="editEnglish" value="${english}">
-                    <input type="text" id="editVietnamese" value="${vietnamese}">
-                    <br/>
-                    <button id="buttonEditWord" onclick="saveEditWord('${english}', '${vietnamese}', this)">Save</button>
+                <div class="input-row" >
+                    <input type="text" id='numberQuestionLevelHard' class="hard" placeholder="Not Set">
+                    <input type="text" id='numberQuestionLevelMedium' class="medium" placeholder="Not Set">
+                    <input type="text" id='numberQuestionLevelEasy' class="easy" placeholder="Not Set">
                 </div>
-            `;
-            document.body.appendChild(editPopup);
-            editPopup.style.display = 'block';
-        }
 
-        function closeEditPopup(element) {
-            const popup = element.closest('.popup');
-            document.body.removeChild(popup);
-        }
+                <label for="type" style="padding-right: 72px;">Type:</label>
+                <select id="type" class="input-single" style="text-align: left; width: 191px;" name="type">
+                    <option value="en-vn">EN - VN</option>
+                    <option value="vn-en">VN - EN</option>
+                    <option value="random">Random</option>
+                </select><br><br>
 
-        function saveEditWord(oldEnglish, oldVietnamese, button) {
-            const newEnglish = document.getElementById('editEnglish').value;
-            const newVietnamese = document.getElementById('editVietnamese').value;
+                <label for="time" style="padding-right: 24px;">Time (mins):</label>
+                <input type="text" id="time" name="time" class="input-single" placeholder="Unlimited"><br><br>
 
-            fetch('/edit-word', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ oldEnglish, oldVietnamese, newEnglish, newVietnamese })
-            }).then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toastr.success('Từ đã được cập nhật!');
-                    searchWords();
-                    closeEditPopup(button);
-                } else {
-                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
-                }
-            });
-        }
+                <div>
+                    <label for="skip">Check correct:</label>
+                    <input type="checkbox" id="correctCheck" name="correctCheck" style="margin-right: 20px;" checked>
+                    <label for="skip">Display correct:</label>
+                    <input type="checkbox" id="correctDisplay" name="correctDisplay" style="margin-right: 20px;" checked>
+                </div>
+                <br>
+                <label for="tryAgainTimes">Try again times:</label>
+                <input type="text" id="tryAgainTimes" class="input-single" name="tryAgainTimes" value="0"><br><br>
 
-        function deleteWord(english, vietnamese, row) {
-            fetch('/delete-word', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ english, vietnamese })
-            }).then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toastr.success('Từ đã được xóa!');
-                    row.remove();
-                } else {
-                    toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
-                }
-            });
-        }
-    </script>
+                <label>Wrong minus score:</label>
+                <div class="input-row" id="wrongMinusLevel">
+                    <input type="text" id="wrongMinusLevelHard" class="hard" placeholder="Hard" value="5">
+                    <input type="text" id="wrongMinusLevelMedium" class="medium" placeholder="Medium" value="5">
+                    <input type="text" id="wrongMinusLevelEasy" class="easy" placeholder="Easy" value="5">
+                </div>
+
+                <label>Right plus score:</label>
+                <div class="input-row" id="rightPlusLevel">
+                    <input type="text" id="rightPlusLevelHard"  class="hard" placeholder="Hard" value="10">
+                    <input type="text" id="rightPlusLevelMedium" class="medium" placeholder="Medium" value="10">
+                    <input type="text" id="rightPlusLevelEasy" class="easy" placeholder="Easy" value="10">
+                </div>
+                <div>
+                    <label for="skip">Skip:</label>
+                    <input type="checkbox" id="skip" name="skip" style="margin-right: 20px;">
+                    <label> <i>Skip minus score:</i> </label>
+                    <div class="input-row" id="skipMinusLevel">
+                        <input type="text" id="skipMinusLevelHard" class="hard" placeholder="Hard" value="1">
+                        <input type="text" id="skipMinusLevelMedium" class="medium" placeholder="Medium" value="2">
+                        <input type="text" id="skipMinusLevelEasy" class="easy" placeholder="Easy" value="3">
+                    </div>
+                </div>
+                <div>
+                    <label for="skip">Hint:</label>
+                    <input type="checkbox" id="hint" name="skip" style="margin-right: 20px;" checked>
+                    Max hint: <input type="text" id="maxHit" class="input-single" placeholder="Unlimited">
+                    <label> <i>Hint minus score:</i> </label>
+                    <div class="input-row" style="margin-top: 10px;" id="hintMinusLevel">
+                        <input type="text" id="hintMinusLevelHard" class="hard" placeholder="Hard" value="1">
+                        <input type="text" id="hintMinusLevelHedium" class="medium" placeholder="Medium" value="2">
+                        <input type="text" id="hintMinusLevelEasy" class="easy" placeholder="Easy" value="3">
+                    </div>
+                </div>
+                <div class="button_getModel">
+                    <button type="button" class="button_base" onclick="closePopup_getlink()">Cancel</button>
+                    <button type="button" class="button_base" onclick="createLink()">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Login Popup -->
+    <div id="loginPopup" class="popup">
+        <div class="popup-content">
+            <span class="close" onclick="closeLoginPopup()">&times;</span>
+            <h2>Login</h2>
+            <label for="username">Username:</label>
+            <input class="input-single" style="text-align: left;" type="text" id="username"> <br><br>
+            <label for="password">Password:</label>
+            <input class="input-single" style="text-align: left;" type="password" id="password"><br>
+            <div class="button_getModel"> <button class="button_base" onclick="login()">Login</button></div>
+        </div>
+    </div>
+
+    <script src="add.js"></script>
 </body>
+
 </html>
