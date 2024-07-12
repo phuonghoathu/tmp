@@ -22,9 +22,7 @@ const storage = multer.diskStorage({
         cb(null, 'uploads/');
     },
     filename: function (req, file, cb) {
-        const session = req.body.session?req.body.session:file.originalname;
-        const english = req.body.english?req.body.english:"";
-        cb(null, `${session}_${english}.jpg`);
+        cb(null, Date.now() + path.extname(file.originalname)) ;
     }
 });
 const upload = multer({ storage: storage });
@@ -84,13 +82,14 @@ app.get('/add.html', (req, res) => {
 });
 
 
-app.post('/add-word',checkAuthentication ,upload.single('image'),upload.single('audio'), (req, res) => {
+app.post('/add-word',checkAuthentication ,upload.fields([{name: 'audio'},{name:'image'}]), (req, res) => {
     const username = req.session.user;
     const { english, vietnamese, session, level, description } = req.body;
-    const imageUrl = req.file ? req.file.filename : null;
+    const imageUrl = req.files.image[0] ? req.files.image[0].filename : null;
+    const audioUrl = req.files.audio[0] ? req.files.audio[0].filename: null;
 
-    const stmt = db.prepare("INSERT INTO words (english, vietnamese, session, username, level, description, imageUrl) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    stmt.run(english, vietnamese, session, username, level, description, imageUrl, (err) => {
+    const stmt = db.prepare("INSERT INTO words (english, vietnamese, session, username, level, description, imageUrl, audio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    stmt.run(english, vietnamese, session, username, level, description, imageUrl,audioUrl, (err) => {
         if (err) {
             res.status(500).json({ success: false, message: 'Database error' });
         } else {
@@ -164,7 +163,7 @@ app.post('/delete-word', checkAuthentication, (req, res) => {
 
 app.get('/search-words', (req, res) => {
     const session = req.query.keyw;
-    db.all(`SELECT id, english, vietnamese ,level ,description,imageUrl FROM words WHERE session = ?`,
+    db.all(`SELECT id, english, vietnamese ,level ,description,imageUrl , audio FROM words WHERE session = ?`,
         [session],
         (err, rows) => {
             if (err) {

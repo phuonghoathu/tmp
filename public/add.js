@@ -198,6 +198,7 @@ function searchWords() {
                     const word_id = document.createElement('td');
                     const hardLevelCell = document.createElement('td');
                     const imageCell = document.createElement('td');
+                    const audioCell = document.createElement('td');
                     const descriptionCell = document.createElement('td');
                     const actionsCell = document.createElement('td');
 
@@ -253,12 +254,16 @@ function searchWords() {
                     word_id.hidden = true
                     actionsCell.innerHTML = '<button class="edit">Sửa</button><button class="delete">Xóa</button>';
 
+                    if(word.audio) {
+                        
+                    }
 
                     row.appendChild(englishCell);
                     row.appendChild(vietnameseCell);
                     row.appendChild(word_id);
                     row.appendChild(hardLevelCell);
                     row.appendChild(imageCell);
+                    row.appendChild(audioCell);
                     row.appendChild(descriptionCell);
                     row.appendChild(actionsCell);
 
