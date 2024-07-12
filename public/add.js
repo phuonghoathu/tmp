@@ -1,3 +1,7 @@
+let mediaRecorder;
+let audioChunks = [];
+let audioBlob;
+
 document.addEventListener("DOMContentLoaded", () => {
     fetch('/get-sessions')
         .then(response => {
@@ -107,6 +111,7 @@ function copySessionDropdownOptions() {
     modalSessionDropdown.value = sessionDropdown.value
     modalSessionDropdown.text = sessionDropdown.text
 }
+
 function addWord() {
     const english = document.getElementById('english').value;
     const vietnamese = document.getElementById('vietnamese').value;
@@ -124,6 +129,9 @@ function addWord() {
     if (imageUpload) {
         formData.append('image', imageUpload, `${session}_${english}.jpg`);
     }
+    if(audioBlob) {
+        formData.append('audio', audioBlob, 'audio.wav');
+    }
 
     fetch('/add-word', {
         method: 'POST',
@@ -137,7 +145,7 @@ function addWord() {
                 document.getElementById('vietnamese').value = '';
                 document.getElementById('description').value = '';
                 document.getElementById('imageUpload').value = '';
-                document.getElementById('level').value = 'easy';
+                document.getElementById('level').value = 'medium';
             } else {
                 toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
             }
@@ -358,7 +366,6 @@ function createLink() {
     });
 }
 
-
 function closeEditPopup(element) {
     const popup = element.closest('.popup');
     document.body.removeChild(popup);
@@ -448,3 +455,51 @@ function deleteWord(id, row) {
             }
         });
 }
+
+document.getElementById('start-recording').addEventListener('click', async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start();
+
+    mediaRecorder.addEventListener('dataavailable', event => {
+        audioChunks.push(event.data);
+    });
+
+    mediaRecorder.addEventListener('stop', () => {
+        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        document.getElementById('audio-playback').src = audioUrl;
+
+        audioChunks = [];
+        document.getElementById('upload-recording').disabled = false;
+    });
+
+    document.getElementById('start-recording').disabled = true;
+    document.getElementById('stop-recording').disabled = false;
+});
+
+document.getElementById('stop-recording').addEventListener('click', () => {
+    mediaRecorder.stop();
+    document.getElementById('start-recording').disabled = false;
+    document.getElementById('stop-recording').disabled = true;
+});
+
+document.getElementById('upload-recording').addEventListener('click', () => {
+    if (!audioBlob) {
+        console.error('No audio blob available for upload');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.wav');
+
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    }).then(response => response.json())
+      .then(data => {
+          console.log(data);
+          document.getElementById('upload-recording').disabled = true;
+      })
+      .catch(error => console.error('Error:', error));
+});

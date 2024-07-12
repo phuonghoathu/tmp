@@ -15,14 +15,15 @@ const session = require('express-session');
 
 const db = new sqlite3.Database(path.join(__dirname, 'data.db'));
 
+
 // Set up multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/');
     },
     filename: function (req, file, cb) {
-        const session = req.body.session;
-        const english = req.body.english;
+        const session = req.body.session?req.body.session:file.originalname;
+        const english = req.body.english?req.body.english:"";
         cb(null, `${session}_${english}.jpg`);
     }
 });
@@ -32,6 +33,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
+
 
 app.use(session({
     secret: 'xvKtGHewe',
@@ -81,7 +83,8 @@ app.get('/add.html', (req, res) => {
     res.sendFile(__dirname + '/public/add.html');
 });
 
-app.post('/add-word',checkAuthentication ,upload.single('image'), (req, res) => {
+
+app.post('/add-word',checkAuthentication ,upload.single('image'),upload.single('audio'), (req, res) => {
     const username = req.session.user;
     const { english, vietnamese, session, level, description } = req.body;
     const imageUrl = req.file ? req.file.filename : null;

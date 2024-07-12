@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeModal = document.getElementsByClassName('close')[0];
 
         let score = 0;
-        let currentWordIndex = 0;
+        //let currentWordIndex = 0;
+        let currentWord = {}
         let currentType = ""
         let timeLeft = data.time ? parseInt(data.time*60) : null;
         let hintCount = 0;
@@ -66,9 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
             intervalTimer = setInterval(function(){
                 timeLeft = Math.round((remainTime - Date.now()) / 1000);
                 if(timeLeft < 0){
-                    //Show result
-                    console.log("Time out")
                     clearInterval(intervalTimer);
+                    handleCompletion();
                     return ;
                 }
                 displayTimeLeft(timeLeft);
@@ -120,7 +120,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         function displayWord() {
-            const word = data.words[currentWordIndex];
+           // const word = data.words[currentWordIndex];//words.splice(Math.floor(Math.random() * words.length), 1)[0];
+            if (data.words.length == 0) {
+                // Show end game
+                handleCompletion();
+            }
+            currentWord = data.words.splice(Math.floor(Math.random() * data.words.length), 1)[0];
             if(data.type === 'random') {
                 ran = Math.round(Math.random())
                 if(ran == 0)
@@ -130,27 +135,27 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 currentType = data.type;
             }
-            wordCard.textContent = currentType === 'en-vn' ? word.english : word.vietnamese;
+            wordCard.textContent = currentType === 'en-vn' ? currentWord.english : currentWord.vietnamese;
         }
 
         function checkAnswer() {
-            const word = data.words[currentWordIndex];
-            const correctAnswer = currentType === 'en-vn' ? word.vietnamese : word.english;
+          //  const word = data.words[currentWordIndex];
+            const correctAnswer = currentType === 'en-vn' ? currentWord.vietnamese : currentWord.english;
 
             if (inputAnswer.value.toLowerCase() === correctAnswer.toLowerCase()) {
-                updateScore(word.level, true);
+                updateScore(currentWord.level, true);
                 if (data.correctDisplay) {
-                    alert('Correct! The answer is: ' + correctAnswer);
+                    toastr.success('Correct!!!');
                 }
             } else {
-                updateScore(word.level, false);
+                updateScore(currentWord.level, false);
                 if (data.correctDisplay) {
-                    alert('Incorrect! The correct answer was: ' + correctAnswer);
+                    toastr.success('Incorrect! The correct answer was: ' + correctAnswer);
                 }
             }
 
             inputAnswer.value = '';
-            currentWordIndex = (currentWordIndex + 1) % data.words.length;
+          //  currentWordIndex = (currentWordIndex + 1) % data.words.length;
             displayWord();
         }
 
@@ -199,23 +204,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function skipWord() {
-            const word = data.words[currentWordIndex];
-            updateScore(word.level, false, false, true);
+          //  const word = data.words[currentWordIndex];
+            updateScore(currentWord.level, false, false, true);
 
             inputAnswer.value = '';
-            currentWordIndex = (currentWordIndex + 1) % data.words.length;
+         //   currentWordIndex = (currentWordIndex + 1) % data.words.length;
             displayWord();
         }
 
         function showHint() {
             hintModal.style.display = 'block';
-            const word = data.words[currentWordIndex];
-            const correctAnswer = currentType === 'en-vn' ? word.vietnamese : word.english;
-            const words = correctAnswer.split('');
+           // const word = currentWord;
+            const correctAnswer = currentType === 'en-vn' ? currentWord.vietnamese : currentWord.english;
+            const wordHint = correctAnswer.split('');
 
             hintContent.innerHTML = '';
             //hintContent.style.textAlign = 'center'
-            words.forEach(word => {
+            wordHint.forEach(word => {
                 const wordElement = document.createElement('span');
                 if(word == ' ') {
                     wordElement.textContent = " ";
@@ -239,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             hintButton.disabled = true;
                             hintButton.style.backgroundColor = "gray"
                         } else {
-                            updateScore(data.words[currentWordIndex].level,true,true, false)
+                            updateScore(currentWord.level,true,true, false)
                             wordElement.textContent = word;
                             wordElement.style.backgroundColor = 'greenyellow';
                         }
@@ -250,10 +255,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-
-        function stopGame() {
-            alert('Time is up!');
-            // Handle stopping the game and displaying the final score or results.
+        
+        function handleCompletion(timeout = false) {
+            const submitButton = document.getElementById('submitAnswer');
+            submitButton.disabled = true;
+            showCelebration();
+            toastr.success("You are completed this test. Thank for your spent time to learning <br /><br /><button type=\"button\" class=\"btn clear\">Yes</button>", "Completed ")
         }
+
+        function applyRandomEffect(element) {
+            const effects = ['slideInLeft', 'zoomIn', 'fadeIn','heartbeat' ,'flipInX','fadeOut','pulse','rotateIn','bounceIn'];
+            const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+            console.log(randomEffect)
+            element.classList.add('animated', randomEffect);
+            setTimeout(() => {
+                element.classList.remove('animated', randomEffect);
+            }, 1000);
+        }
+    
+        function showCelebration() {
+            const duration = 2 * 1000;
+            const end = Date.now() + duration;
+    
+            (function frame() {
+                confetti({
+                    particleCount: 2,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 }
+                });
+                confetti({
+                    particleCount: 2,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 }
+                });
+    
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+    
+        
     }
 });
