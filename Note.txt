@@ -1,3 +1,5 @@
 npm install sqlite3
 npm install express-session
 npm install multer
+npm install hashids
+npm install express
