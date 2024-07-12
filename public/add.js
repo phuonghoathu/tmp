@@ -255,7 +255,9 @@ function searchWords() {
                     actionsCell.innerHTML = '<button class="edit">Sửa</button><button class="delete">Xóa</button>';
 
                     if(word.audio) {
-                        
+                        console.log("have")
+                        audioCell.src = `/uploads/${word.audio}`;
+                        audioCell.controls = true;
                     }
 
                     row.appendChild(englishCell);
@@ -487,24 +489,4 @@ document.getElementById('stop-recording').addEventListener('click', () => {
     mediaRecorder.stop();
     document.getElementById('start-recording').disabled = false;
     document.getElementById('stop-recording').disabled = true;
-});
-
-document.getElementById('upload-recording').addEventListener('click', () => {
-    if (!audioBlob) {
-        console.error('No audio blob available for upload');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.wav');
-
-    fetch('/upload', {
-        method: 'POST',
-        body: formData
-    }).then(response => response.json())
-      .then(data => {
-          console.log(data);
-          document.getElementById('upload-recording').disabled = true;
-      })
-      .catch(error => console.error('Error:', error));
 });
