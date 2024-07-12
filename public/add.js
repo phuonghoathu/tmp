@@ -255,9 +255,13 @@ function searchWords() {
                     actionsCell.innerHTML = '<button class="edit">Sửa</button><button class="delete">Xóa</button>';
 
                     if(word.audio) {
-                        console.log("have")
-                        audioCell.src = `/uploads/${word.audio}`;
-                        audioCell.controls = true;
+                        const playIcon = document.createElement('i');
+                        playIcon.classList.add('fas', 'fa-play-circle', 'icon-button');
+                        playIcon.addEventListener('click', () => {
+                            const audio = new Audio(`/uploads/${word.audio}`);
+                            audio.play();
+                        });
+                        audioCell.appendChild(playIcon);
                     }
 
                     row.appendChild(englishCell);
