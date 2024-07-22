@@ -91,21 +91,50 @@ function openPopup() {
 function closePopup() {
     document.getElementById('sessionPopup').style.display = 'none';
 }
-function copySessionDropdownOptions() {
+
+
+function getQuizLink() {
+    copySessionDropdownOptions('modalSessionLearningDropdown');
+    const myLink = document.getElementById('learningLinkPopup');
+    myLink.style.top = 'center';
+    myLink.style.left = 'center';
+    myLink.style.display = 'block';
+}
+function closePopup_getLearninglink() {
+    document.getElementById('learningLinkPopup').style.display = 'none';
+}
+
+function closePopup_quizlink() {
+    document.getElementById('quizLinkPopup').style.display = 'none';
+}
+
+function openPopup_quizlink(url, passcode) {
+    document.getElementById('quizLinkPopup').style.display = 'block';
+    const yourQuizLink = document.getElementById('yourQuizLink');
+    const yourPass = document.getElementById('yourPass');
+
+    yourQuizLink.textContent = "Quiz URL : " + url;
+    yourPass.textContent = "Quiz pass code : " + passcode;
+}
+
+function copySessionDropdownOptions(idTo = 'modalSessionDropdown') {
     const sessionDropdown = document.getElementById('sessionDropdown');
-    const modalSessionDropdown = document.getElementById('modalSessionDropdown');
+    const modalSessionDropdown = document.getElementById(idTo);
     modalSessionDropdown.innerHTML = '';
 
     Array.from(sessionDropdown.options).forEach(option => {
         const newOption = document.createElement('option');
         if(option.value == 'add-session') {
-            newOption.value = 'all';
-            newOption.text = "All";
+            if(idTo == 'modalSessionDropdown') {
+                newOption.value = 'all';
+                newOption.text = "All";
+                modalSessionDropdown.appendChild(newOption);
+            }
         } else {
             newOption.value = option.value;
             newOption.text = option.text;
+            modalSessionDropdown.appendChild(newOption);
         }
-        modalSessionDropdown.appendChild(newOption);
     });
     
     modalSessionDropdown.value = sessionDropdown.value
@@ -219,23 +248,23 @@ function searchWords() {
                     // Handle image display with popup
                     if (word.imageUrl) {
                         const imgIcon = document.createElement('img');
-                        imgIcon.src = '/uploads/icon/view.png'; // Replace with your icon path
-                        imgIcon.alt = `/uploads/${word.imageUrl}`;
+                        imgIcon.src = '../uploads/icon/view.png'; // Replace with your icon path
+                        imgIcon.alt = `../uploads/${word.imageUrl}`;
                         imgIcon.style.cursor = 'pointer';
                         imgIcon.onclick = () => {
                             const imgPopup = document.createElement('img');
                             imgPopup.src = `/uploads/${word.imageUrl}`;
                             imgPopup.style.maxWidth = '100%';
                             imgPopup.style.maxHeight = '100%';
+                            imgPopup.style.border = '3px solid rebeccapurple';
                             imgPopup.style.padding= '4px';
 
                             const popupDiv = document.createElement('div');
                             popupDiv.style.position = 'fixed';
                             popupDiv.style.top = 'center';
                             popupDiv.style.left = 'center';
-                        //    popupDiv.style.width = '400px';
-                          //  popupDiv.style.height = '500px';
-                            popupDiv.style.backgroundColor = 'rgb(125 106 106 / 80%)';
+                            popupDiv.style.width = '400px';
+                            popupDiv.style.height = '500px';
                             popupDiv.style.display = 'flex';
                             popupDiv.style.alignItems = 'center';
                             popupDiv.style.justifyContent = 'center';
@@ -258,7 +287,7 @@ function searchWords() {
                         const playIcon = document.createElement('i');
                         playIcon.classList.add('fas', 'fa-play-circle', 'icon-button');
                         playIcon.addEventListener('click', () => {
-                            const audio = new Audio(`/uploads/${word.audio}`);
+                            const audio = new Audio(`../uploads/${word.audio}`);
                             audio.play();
                         });
                         audioCell.appendChild(playIcon);
@@ -281,6 +310,10 @@ function searchWords() {
         });
 }
 
+function getLeaningLink() {
+    const myLinkInfo = document.getElementById('yourLearingLink');
+    myLinkInfo.textContent = "Your link is " + "http://localhost:3000/" + "learning.html?data=" + document.getElementById('modalSessionLearningDropdown').value
+}
 function getLink() {
     copySessionDropdownOptions();
     const myLink = document.getElementById('myModal_gen_link');
@@ -292,6 +325,7 @@ function getLink() {
 function closePopup_getlink() {
     document.getElementById('myModal_gen_link').style.display = 'none';
 }
+
 
 function createLink() {
     const session = document.getElementById('modalSessionDropdown').value;
@@ -328,6 +362,7 @@ function createLink() {
     const maxHint = document.getElementById('maxHit').value;
     const correctCheck = document.getElementById('correctCheck').checked;
     const correctDisplay = document.getElementById('correctDisplay').checked;
+  //  const randomCode = genRand(8);
 
     /* Kiểm tra xem có ít nhất một trường trong các trường hard, medium, hoặc easy được nhập hay không
     const isAnyQuestionSet = hard || medium || easy;
@@ -356,6 +391,7 @@ function createLink() {
         maxHint,
         correctCheck,
         correctDisplay
+        //randomCode
     };
 
     fetch('/create-url', {
@@ -369,7 +405,9 @@ function createLink() {
     .then(result => {
         if (result.success) {
             // Display the created URL or do something with it
-            console.log('Created URL:', result.url);
+            closePopup_getlink();
+            openPopup_quizlink(result.url, result.randomCode);
+           // alert('Created URL:' +  result.url + " Code: " + randomCode);
         } else {
             // Handle error
             console.error('Error creating URL:', result.message);

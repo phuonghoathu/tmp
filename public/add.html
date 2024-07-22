@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <link rel="stylesheet" href="style_add.css">
+    <link rel="stylesheet" href="css/style_add.css">
 </head>
 
 <body>
@@ -27,7 +27,8 @@
                     </select>
                     <input id="session_encode" type="hidden" value="">
                     <button id="seach_word" class="button_base" onclick="searchWords()">Search</button>
-                    <button id="get_link" class="button_base" onclick="getLink()">Get Link</button>
+                    <button id="learn_link" class="button_base" onclick="getQuizLink()">Learn Link</button>
+                    <button id="get_link" class="button_base" onclick="getLink()">Quiz Link</button>
                 </div>
                 <div class="input-pair">
                     <input type="text" id="english" placeholder="Tiếng Anh">
@@ -87,6 +88,26 @@
             <h2>Thêm Session mới</h2>
             <input type="text" id="newSessionName" class="input-single" placeholder="Session Name">
             <button class="button_base" onclick="saveSession()">Save</button>
+        </div>
+    </div>
+
+    <div id="learningLinkPopup" class="popup">
+        <div class="popup-content">
+            <span class="close" onclick="closePopup_getLearninglink()">&times;</span>
+            <h2>Learning Link</h2>
+            <select id="modalSessionLearningDropdown"></select> <br>
+            <p id = "yourLearingLink"></p>
+            <button class="button_base" onclick="getLeaningLink()">Create</button>
+        </div>
+    </div>
+
+    <div id="quizLinkPopup" class="popup">
+        <div class="popup-content">
+            <span class="close" onclick="closePopup_quizlink()">&times;</span>
+            <h2>Quiz Link</h2>
+            <p id = "yourQuizLink"></p>
+            <p id = "yourPass"></p>
+            <button class="button_base" onclick="closePopup_quizlink()">OK</button>
         </div>
     </div>
 
@@ -180,7 +201,7 @@
         </div>
     </div>
 
-    <script src="add.js"></script>
+    <script src="js/add.js"></script>
 </body>
 
 </html>

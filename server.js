@@ -180,6 +180,8 @@ app.post('/create-url',checkAuthentication, (req, res) => {
     data.username =  req.session.user
 
     // Convert data object to JSON string
+    let randomCode = genRand(8);
+    console.log(randomCode)
     const dataString = JSON.stringify(data);
     console.log(dataString)
 
@@ -197,24 +199,30 @@ app.post('/create-url',checkAuthentication, (req, res) => {
 
         // Store the compressed and encrypted data in the database
         let url = ""
-        db.run(`INSERT INTO encoded_data (id, data) VALUES (?, ?)`, [shortId, buffer.toString('base64')], function(err) {
+        db.run(`INSERT INTO encoded_data (id, passcode, data) VALUES (?, ?,?)`, [shortId, randomCode , buffer.toString('base64')], function(err) {
             if (err) {
-                let restThat = res;
-                db.get(`SELECT data FROM encoded_data WHERE id = ?`, [shortId], (err, row) => {
-                    if (!err) {
+                console.log(err);
+                db.get(`SELECT data, passcode FROM encoded_data WHERE id = ?`, [shortId], (err, row) => {
+                    if (err) {
                         console.log("Error get old")
                     }
                     if (!row) {
                         console.log("Not exits data")
                     }
                     url = row.data;
-                });
-            }
-            // Create URL with short ID
-            url = `http://localhost:3000/?data=${encodeURIComponent(shortId)}`;
-            console.log(url)
+                    randomCode = row.passcode;
+                    // Create URL with short ID
+                    url = `http://localhost:3000/?data=${encodeURIComponent(shortId)}`;
+                    console.log("url " + url)
 
-            res.json({ success: true, url });
+                    res.json({ success: true, url , randomCode});
+                });
+            } else {
+                // Create URL with short ID
+                url = `http://localhost:3000/?data=${encodeURIComponent(shortId)}`;
+                console.log(url)
+                res.json({ success: true, url , randomCode});
+            }
         });
     });
 });
@@ -253,6 +261,64 @@ app.get('/quiz', (req, res) => {
     });
 
 });
+
+app.post('/check-pascode', (req, res) => {
+    console.log(req.body);
+    db.get(`SELECT id FROM encoded_data WHERE id = ? and passcode = ?`, [req.body.dataUrl, req.body.passcode], (err, row) => {
+        if (err) {
+            res.status(400).json({ success: false });
+        } else {
+            if (!row) {
+                res.status(400).json({ success: false });
+            } else {
+                res.json({ success: true });
+            }
+        }
+    });
+   /* 
+   {
+  dataAnswer: [
+    { question: 'Problem', answer: 'vấn đề', hintCount: 0 },
+    { question: 'Way', answer: 'd', hintCount: 2 }
+  ]
+}
+  db.run(`DELETE FROM words WHERE id = ?`,
+        [id],
+        function(err) {
+            if (err) {
+                console.error('Error deleting word', err.message);
+                res.status(500).json({ success: false });
+            } else {
+                res.json({ success: true });
+            }
+        });*/
+});
+
+app.post('/submitAnswer', (req, res) => {
+    console.log(req.body);
+
+   /* 
+   {
+  dataAnswer: [
+    { question: 'Problem', answer: 'vấn đề', hintCount: 0 },
+    { question: 'Way', answer: 'd', hintCount: 2 }
+  ]
+}
+  db.run(`DELETE FROM words WHERE id = ?`,
+        [id],
+        function(err) {
+            if (err) {
+                console.error('Error deleting word', err.message);
+                res.status(500).json({ success: false });
+            } else {
+                res.json({ success: true });
+            }
+        });*/
+});
+
+function genRand(len){
+    return Math.random().toString(36).substring(2,len+2);
+}
 
 function getWord(data, res) {
     const session = data.session;

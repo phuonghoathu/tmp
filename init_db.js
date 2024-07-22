@@ -16,7 +16,8 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
                 session TEXT,
                 level TEXT,
                 description TEXT,
-                imageUrl TEXT
+                imageUrl TEXT,
+                audio TEXT default ''
             )`);
     
             db.run(`CREATE TABLE IF NOT EXISTS topic (
@@ -28,11 +29,23 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
     
             db.run(`CREATE TABLE IF NOT EXISTS encoded_data (
                 id TEXT PRIMARY KEY,
-                data TEXT NOT NULL
+                data TEXT NOT NULL,
+                passcode TEXT default ''
             )`);
     
             db.run(`CREATE TABLE IF NOT EXISTS user 
             (username TEXT, password TEXT, active INTEGER, last_login TEXT)`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS answer (
+                id TEXT PRIMARY KEY AUTOINCREMENT,
+                testuser TEXT NOT NULL,
+                topicid INTEGER,
+                question TEXT NOT NULL ,
+                answer TEXT default '',
+                hintCount INTEGER,
+                point INTEGER,
+                correct TEXT 
+            )`);
         } else if(parm[2] == 'data') {
             // Insert dummy users for example purposes
             db.run("INSERT INTO user (username, password, active, last_login) VALUES ('teacher', 'a', 1, NULL)");
@@ -41,7 +54,8 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
             db.run(`INSERT INTO topic (username, session, session_encode)  VALUES ('teacher','Session01','e87120c1b331a44cecc60380e2286978')`);
             db.run(`INSERT INTO topic (username, session, session_encode)  VALUES ('user','Session01','5e0a9d73ec8c67fd451c879366cb4f98')`);
         } else {
-            db.run(`ALTER TABLE words ADD COLUMN audio TEXT default ''`);
+           // db.run(`ALTER TABLE words ADD COLUMN audio TEXT default ''`);
+            db.run(`ALTER TABLE encoded_data ADD COLUMN passcode TEXT default ''`);
         }
         
         

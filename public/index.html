@@ -9,13 +9,13 @@
     <!-- Toastr JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header" >
-            <h1>Learning new words</h1>
+            <h1>Quiz new words</h1>
             <div class="clock">
                 <div class="circle">
                     <svg width="80" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
@@ -48,9 +48,13 @@
             </div>
             <div class="button">
                 <button id="submitAnswer">Trả lời</button>
-                <button id="skip" style="display: none;">Skip</button>
-                <button id="hint" style="display: none;">Hint</button>
+                <button id="skip" style="display: none;">Bỏ qua</button>
+                <button id="hint" style="display: none;">Gợi ý</button>
             </div>
+            <div class="button">
+                <button id="submitQuiz">Nộp bài</button>
+            </div>
+            <div id="leveLBar" style="height: 13px;width: 106%;"></div>
         </div>
     </div>
     <div id="effectContainer"></div>
@@ -61,6 +65,23 @@
             <p id="hintContent"></p>
         </div>
     </div>
-    <script src="app.js"></script>
+    <div id="authModal" class="modal">
+        <div class="modal-content" style="width: 500px;">
+            <span class="close">&times;</span>
+            <h2>Enter your name and passcode</h2>
+            <p class="error-message" id="errorMessage"></p>
+            <form id="authForm">
+                <div class="input-pair">
+                    <input type="text" id="name" name="name" placeholder="Your Name" required><br><br>
+                    <input type="password" id="passcode" name="passcode" placeholder="Passcode" required><br><br>
+                </div>
+                <div class="button" style="text-align: right;">
+                    <button  type="submit">Submit</button>
+                </div>
+                
+            </form>
+        </div>
+    </div>
+    <script src="js/app.js"></script>
 </body>
 </html>

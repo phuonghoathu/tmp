@@ -1,13 +1,56 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+    const modal = document.getElementById("authModal");
+    const span = document.getElementsByClassName("close")[1];
+    const errorMessage = document.getElementById("errorMessage");
     const urlParams = new URLSearchParams(window.location.search);
     const dataUrl = urlParams.get('data');
-    
-    fetch(`/quiz?data=${encodeURIComponent(dataUrl)}`)
+
+    // Show the modal
+    modal.style.display = "block";
+
+    // Close the modal
+    span.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    // Handle form submission
+    document.getElementById("authForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const name = document.getElementById("name").value;
+        const passcode = document.getElementById("passcode").value;
+
+        // Call API to check name and passcode
+        fetch('/check-pascode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, passcode, dataUrl })
+        })
         .then(response => response.json())
         .then(data => {
-            initializeGame(data);
+            if (data.success) {
+                modal.style.display = "none";
+                
+                fetch(`/quiz?data=${encodeURIComponent(dataUrl)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        initializeGame(data);
+                    })
+                    .catch(error => console.error('Error fetching data:', error));
+            } else {
+                errorMessage.textContent = "Bạn đã nhập sai thông tin rồi! Vui lòng nhập lại nhé.";  // Show error message
+            }
         })
-        .catch(error => console.error('Error fetching data:', error));
+        .catch(error => console.error('Error checking auth:', error));
+    });
 
     function initializeGame(data) {
         const wordCard = document.getElementById('wordCard');
@@ -19,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hintModal = document.getElementById('hintModal');
         const hintContent = document.getElementById('hintContent');
         const closeModal = document.getElementsByClassName('close')[0];
+        const submitQuiz = document.getElementById('submitQuiz');
 
         let score = 0;
         //let currentWordIndex = 0;
@@ -26,6 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentType = ""
         let timeLeft = data.time ? parseInt(data.time*60) : null;
         let hintCount = 0;
+        let questionHitCount = 0 ;
+        let dataAnswer = [];
+        let sessionId = data.session;
 
  ///START TIME PROCESS    
         let progressBar = document.querySelector('.e-c-progress');
@@ -101,6 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
             checkAnswer();
         });
 
+        submitQuiz.addEventListener('click', () => {
+            submitQuizAll();
+        });
+
         skipButton.addEventListener('click', () => {
             skipWord();
         });
@@ -136,25 +187,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentType = data.type;
             }
             wordCard.textContent = currentType === 'en-vn' ? currentWord.english : currentWord.vietnamese;
+            console.log(currentWord.level)
+            const leveLBar = document.getElementById('leveLBar');
+            if(currentWord.level == 'Easy') {
+                leveLBar.style.backgroundColor = 'aquamarine';
+            } else if(currentWord.level == 'Medium') {
+                leveLBar.style.backgroundColor = 'greenyellow';
+            } else if(currentWord.level == 'Hard') {
+                leveLBar.style.backgroundColor = 'red';
+            }  
+        }
+
+        function submitQuizAll() {
+            const tmpData = {dataAnswer};
+
+            fetch('/submitAnswer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(tmpData)
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        toastr.success('Từ đã được cập nhật!');
+                        searchWords();
+                        closeEditPopup(button);
+                    } else {
+                        toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
+                    }
+                });
         }
 
         function checkAnswer() {
           //  const word = data.words[currentWordIndex];
             const correctAnswer = currentType === 'en-vn' ? currentWord.vietnamese : currentWord.english;
+            const flagCorect = false;
+            let scoreChange ;
 
             if (inputAnswer.value.toLowerCase() === correctAnswer.toLowerCase()) {
-                updateScore(currentWord.level, true);
+                flagCorect = true;
+                scoreChange = updateScore(currentWord.level, true);
                 if (data.correctDisplay) {
                     toastr.success('Correct!!!');
                 }
             } else {
-                updateScore(currentWord.level, false);
+                scoreChange = updateScore(currentWord.level, false);
                 if (data.correctDisplay) {
                     toastr.success('Incorrect! The correct answer was: ' + correctAnswer);
                 }
             }
 
+            const questtionTmp = currentType === 'en-vn' ? currentWord.english : currentWord.vietnamese;
+            dataAnswer.push({"question": questtionTmp,"answer": inputAnswer.value, "hintCount" : questionHitCount, 
+                "correct" :flagCorect,"point":scoreChange, "session": sessionId});
+
             inputAnswer.value = '';
+            questionHitCount = 0;
           //  currentWordIndex = (currentWordIndex + 1) % data.words.length;
             displayWord();
         }
@@ -201,14 +290,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             score += scoreChange;
             scoreElement.textContent = score;
+            return scoreChange;
         }
 
         function skipWord() {
           //  const word = data.words[currentWordIndex];
-            updateScore(currentWord.level, false, false, true);
+            const scoreChange = updateScore(currentWord.level, false, false, true);
+
+            const questtionTmp = currentType === 'en-vn' ? currentWord.english : currentWord.vietnamese;
+            dataAnswer.push({"question": questtionTmp,"answer": inputAnswer.value, "hintCount" : questionHitCount, 
+                "point":scoreChange, "correct" :false, "session": sessionId});
 
             inputAnswer.value = '';
-         //   currentWordIndex = (currentWordIndex + 1) % data.words.length;
+            questionHitCount = 0;
+            
             displayWord();
         }
 
@@ -240,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
                     wordElement.addEventListener('click', () => {
                         hintCount++;
+                        questionHitCount++;
                         if (hintCount > parseInt(data.maxHint)) {
                             hintButton.disabled = true;
                             hintButton.style.backgroundColor = "gray"
@@ -260,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const submitButton = document.getElementById('submitAnswer');
             submitButton.disabled = true;
             showCelebration();
+            submitQuizAll();
             toastr.success("You are completed this test. Thank for your spent time to learning <br /><br /><button type=\"button\" class=\"btn clear\">Yes</button>", "Completed ")
         }
 
