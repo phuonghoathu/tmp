@@ -29,6 +29,8 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
     
             db.run(`CREATE TABLE IF NOT EXISTS encoded_data (
                 id TEXT PRIMARY KEY,
+                name TEXT,
+                username TEXT,
                 data TEXT NOT NULL,
                 passcode TEXT default ''
             )`);
@@ -37,14 +39,22 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
             (username TEXT, password TEXT, active INTEGER, last_login TEXT)`);
 
             db.run(`CREATE TABLE IF NOT EXISTS answer (
-                id TEXT PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 testuser TEXT NOT NULL,
-                topicid INTEGER,
+                quizId INTEGER,
+                quizName TEXT,
+                duration TEXT,
+                totalPoint INTEGER
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS answerdetail (
+                answerid INTEGER,
                 question TEXT NOT NULL ,
+                topicId TEXT,
                 answer TEXT default '',
+                correct TEXT ,
                 hintCount INTEGER,
-                point INTEGER,
-                correct TEXT 
+                point INTEGER
             )`);
         } else if(parm[2] == 'data') {
             // Insert dummy users for example purposes
@@ -55,7 +65,11 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
             db.run(`INSERT INTO topic (username, session, session_encode)  VALUES ('user','Session01','5e0a9d73ec8c67fd451c879366cb4f98')`);
         } else {
            // db.run(`ALTER TABLE words ADD COLUMN audio TEXT default ''`);
-            db.run(`ALTER TABLE encoded_data ADD COLUMN passcode TEXT default ''`);
+           // db.run(`ALTER TABLE encoded_data ADD COLUMN passcode TEXT default ''`);
+           db.run(`DROP TABLE answer`);
+           db.run(`DROP TABLE answerdetail`);
+           db.run(`DROP TABLE encoded_data`);
+           //db.run(`ALTER TABLE encoded_data ADD COLUMN name TEXT default ''`);
         }
         
         

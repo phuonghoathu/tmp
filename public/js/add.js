@@ -248,8 +248,8 @@ function searchWords() {
                     // Handle image display with popup
                     if (word.imageUrl) {
                         const imgIcon = document.createElement('img');
-                        imgIcon.src = '../uploads/icon/view.png'; // Replace with your icon path
-                        imgIcon.alt = `../uploads/${word.imageUrl}`;
+                        imgIcon.src = '/uploads/icon/view.png'; // Replace with your icon path
+                        imgIcon.alt = `/uploads/${word.imageUrl}`;
                         imgIcon.style.cursor = 'pointer';
                         imgIcon.onclick = () => {
                             const imgPopup = document.createElement('img');
@@ -287,7 +287,7 @@ function searchWords() {
                         const playIcon = document.createElement('i');
                         playIcon.classList.add('fas', 'fa-play-circle', 'icon-button');
                         playIcon.addEventListener('click', () => {
-                            const audio = new Audio(`../uploads/${word.audio}`);
+                            const audio = new Audio(`/uploads/${word.audio}`);
                             audio.play();
                         });
                         audioCell.appendChild(playIcon);
@@ -316,7 +316,11 @@ function getLeaningLink() {
 }
 function getLink() {
     copySessionDropdownOptions();
+    var date = new Date();
     const myLink = document.getElementById('myModal_gen_link');
+    document.getElementById('quizName').value = date.getFullYear().toString() + pad2(date.getMonth() + 1) 
+                        + pad2( date.getDate()) + "/" +pad2( date.getHours() ) 
+                        + pad2( date.getMinutes() ) + pad2( date.getSeconds() );
     myLink.style.top = 'center';
     myLink.style.left = 'center';
     myLink.style.display = 'block';
@@ -328,6 +332,8 @@ function closePopup_getlink() {
 
 
 function createLink() {
+    
+    const quizName = document.getElementById('quizName').value;
     const session = document.getElementById('modalSessionDropdown').value;
     const numberQuestion = document.getElementById('numberQuestion').value;
 
@@ -374,6 +380,7 @@ function createLink() {
     }*/
 
     const data = {
+        quizName,
         session,
         numberQuestion,
         hard,
@@ -526,6 +533,8 @@ document.getElementById('start-recording').addEventListener('click', async () =>
     document.getElementById('start-recording').disabled = true;
     document.getElementById('stop-recording').disabled = false;
 });
+
+function pad2(n) { return n < 10 ? '0' + n : n }
 
 document.getElementById('stop-recording').addEventListener('click', () => {
     mediaRecorder.stop();

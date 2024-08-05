@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             audioIcon.classList.add('audio-icon');
             audioIcon.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const audio = new Audio(data.audio);
+                const audio = new Audio(`/uploads/${data.audio}`);
                 audio.play();
             });
             front.appendChild(audioIcon);

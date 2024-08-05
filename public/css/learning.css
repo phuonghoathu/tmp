@@ -9,8 +9,8 @@ body {
     margin: 0;
 }
 .flashcard {
-    width: 300px;
-    height: 400px;
+    width: 450px;
+    height: 600px;
     position: relative;
     perspective: 1000px;
     cursor: pointer;

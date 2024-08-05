@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById("errorMessage");
     const urlParams = new URLSearchParams(window.location.search);
     const dataUrl = urlParams.get('data');
+    let testUser = "";
+    let startTime ;
+    let firstSubmit = false;
 
     // Show the modal
     modal.style.display = "block";
@@ -23,7 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle form submission
     document.getElementById("authForm").addEventListener("submit", function(event) {
         event.preventDefault();
-        const name = document.getElementById("name").value;
+        testUser = document.getElementById("name").value;
+        startTime = new Date(); 
         const passcode = document.getElementById("passcode").value;
 
         // Call API to check name and passcode
@@ -32,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ name, passcode, dataUrl })
+            body: JSON.stringify({passcode, dataUrl })
         })
         .then(response => response.json())
         .then(data => {
@@ -53,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function initializeGame(data) {
+        console.log(data)
         const wordCard = document.getElementById('wordCard');
         const inputAnswer = document.getElementById('inputAnswer');
         const submitAnswer = document.getElementById('submitAnswer');
@@ -72,7 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let hintCount = 0;
         let questionHitCount = 0 ;
         let dataAnswer = [];
-        let sessionId = data.session;
+        let sessionEncode ;
+        let quizName = data.quizName;
+        let quizId = data.quizId;
 
  ///START TIME PROCESS    
         let progressBar = document.querySelector('.e-c-progress');
@@ -150,6 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         submitQuiz.addEventListener('click', () => {
             submitQuizAll();
+            showCelebration();
+            toastr.success("You are completed this test. Thank for your spent time to learning <br /><br /><button type=\"button\" class=\"btn clear\">Yes</button>", "Completed ")
         });
 
         skipButton.addEventListener('click', () => {
@@ -188,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             wordCard.textContent = currentType === 'en-vn' ? currentWord.english : currentWord.vietnamese;
             console.log(currentWord.level)
+            sessionEncode = currentWord.session;
             const leveLBar = document.getElementById('leveLBar');
             if(currentWord.level == 'Easy') {
                 leveLBar.style.backgroundColor = 'aquamarine';
@@ -199,20 +209,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function submitQuizAll() {
-            const tmpData = {dataAnswer};
+            if (firstSubmit) {
+                return;
+            }
+            firstSubmit = true;
+            const endTime = new Date();
+            const objJson = {"testUser": testUser, "quizId": quizId, "quizName" : quizName,"duration" : msToTime(endTime - startTime), "data":dataAnswer};
 
             fetch('/submitAnswer', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(tmpData)
+                body: JSON.stringify(objJson)
             }).then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        toastr.success('Từ đã được cập nhật!');
-                        searchWords();
-                        closeEditPopup(button);
+                      //  toastr.success('Từ đã được cập nhật!');
                     } else {
                         toastr.error('Có lỗi xảy ra, vui lòng thử lại!');
                     }
@@ -222,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function checkAnswer() {
           //  const word = data.words[currentWordIndex];
             const correctAnswer = currentType === 'en-vn' ? currentWord.vietnamese : currentWord.english;
-            const flagCorect = false;
+            let flagCorect = false;
             let scoreChange ;
 
             if (inputAnswer.value.toLowerCase() === correctAnswer.toLowerCase()) {
@@ -239,8 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const questtionTmp = currentType === 'en-vn' ? currentWord.english : currentWord.vietnamese;
+            
             dataAnswer.push({"question": questtionTmp,"answer": inputAnswer.value, "hintCount" : questionHitCount, 
-                "correct" :flagCorect,"point":scoreChange, "session": sessionId});
+                "correct" :flagCorect,"point":scoreChange, "session": sessionEncode});
 
             inputAnswer.value = '';
             questionHitCount = 0;
@@ -299,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const questtionTmp = currentType === 'en-vn' ? currentWord.english : currentWord.vietnamese;
             dataAnswer.push({"question": questtionTmp,"answer": inputAnswer.value, "hintCount" : questionHitCount, 
-                "point":scoreChange, "correct" :false, "session": sessionId});
+                "point":scoreChange, "correct" :false, "session": sessionEncode});
 
             inputAnswer.value = '';
             questionHitCount = 0;
@@ -355,9 +369,11 @@ document.addEventListener('DOMContentLoaded', () => {
         function handleCompletion(timeout = false) {
             const submitButton = document.getElementById('submitAnswer');
             submitButton.disabled = true;
-            showCelebration();
+            if (!firstSubmit) {
+                showCelebration();
+                toastr.success("You are completed this test. Thank for your spent time to learning <br /><br /><button type=\"button\" class=\"btn clear\">Yes</button>", "Completed ")
+            }
             submitQuizAll();
-            toastr.success("You are completed this test. Thank for your spent time to learning <br /><br /><button type=\"button\" class=\"btn clear\">Yes</button>", "Completed ")
         }
 
         function applyRandomEffect(element) {
@@ -393,7 +409,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }());
         }
-    
-        
+        function msToTime(duration) {
+            var milliseconds = parseInt((duration % 1000) / 100),
+              seconds = Math.floor((duration / 1000) % 60),
+              minutes = Math.floor((duration / (1000 * 60)) % 60),
+              hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+          
+            hours = (hours < 10) ? "0" + hours : hours;
+            minutes = (minutes < 10) ? "0" + minutes : minutes;
+            seconds = (seconds < 10) ? "0" + seconds : seconds;
+          
+            return hours + ":" + minutes + ":" + seconds + "." + milliseconds;
+        }
     }
 });

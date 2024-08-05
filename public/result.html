@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Answers</title>
+    <link rel="stylesheet" href="css/result.css" />
+</head>
+<body>
+    <div class="container">
+    <h1>Answers</h1>
+    <div class="search-container">
+        <input type="text" id="username" placeholder="Enter test username">
+        <button onclick="searchAnswers()">Search</button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Test User</th>
+                <th>Topic</th>
+                <th>Duration</th>
+                <th>Total Point</th>
+            </tr>
+        </thead>
+        <tbody id="answers-table-body">
+        </tbody>
+    </table>
+    </div>
+    <script src="js/result.js"></script>
+</body>
+</html>
