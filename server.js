@@ -8,6 +8,8 @@ const path = require('path');
 const Hashids = require('hashids/cjs');
 const hashids = new Hashids('my salt', 16);
 const session = require('express-session');
+require('dotenv').config();
+let dynamicFolderName = "words";
 
 //var name = 'user_Session01';
 //var hash = crypto.createHash('md5').update(name).digest('hex');
@@ -19,7 +21,12 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'));
 // Set up multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/');
+        const dir = path.join(__dirname, 'uploads', dynamicFolderName, req.session.user);
+        if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir, { recursive: true }); // Tạo thư mục nếu chưa tồn tại
+        }
+        cb(null, dir);
+      //  cb(null, 'uploads/');
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -214,14 +221,14 @@ app.post('/create-url', checkAuthentication, (req, res) => {
                     url = row.data;
                     randomCode = row.passcode;
                     // Create URL with short ID
-                    url = `http://localhost:3000/?data=${encodeURIComponent(shortId)}`;
+                    url = `${process.env.PAGE_URL}:${process.env.PORT}/student/?data=${encodeURIComponent(shortId)}`;
                     console.log("url " + url)
 
                     res.json({ success: true, url, randomCode });
                 });
             } else {
                 // Create URL with short ID
-                url = `http://localhost:3000/?data=${encodeURIComponent(shortId)}`;
+                url = `${process.env.PAGE_URL}:${process.env.PORT}/student/?data=${encodeURIComponent(shortId)}`;
                 console.log(url)
                 res.json({ success: true, url, randomCode });
             }
@@ -417,9 +424,11 @@ function getWord(data,shortId,quizName, res) {
         }
     });
 }
+
 app.get('/get-sessions', checkAuthentication, (req, res) => {
     const username = req.session.user;
-    db.all(`SELECT session, session_encode FROM topic WHERE username = ?`, [username], (err, rows) => {
+    const type = req.query.type;
+    db.all(`SELECT session, session_encode FROM topic WHERE username = ? and type = ?`, [username,type], (err, rows) => {
         if (err) {
             console.error('Error querying sessions', err.message);
             res.status(500).json({ success: false });
@@ -431,10 +440,10 @@ app.get('/get-sessions', checkAuthentication, (req, res) => {
 
 app.post('/add-session', checkAuthentication, (req, res) => {
     const username = req.session.user;
-    const { session } = req.body;
-    var tmp = username + '_' + session;
+    const { session, type } = req.body;
+    var tmp = username + '_' + session + '_' + type;
     var session_encode = crypto.createHash('md5').update(tmp).digest('hex');
-    db.run(`INSERT INTO topic (username, session, session_encode) VALUES (?,?,?)`, [username, session, session_encode], function (err) {
+    db.run(`INSERT INTO topic (username, session, session_encode, type) VALUES (?,?,?,?)`, [username, session, session_encode, type], function (err) {
         if (err) {
             console.error('Error inserting session', err.message);
             res.status(500).json({ success: false });
@@ -474,6 +483,103 @@ app.get('/answerdetails/:answerid', (req, res) => {
     });
 });
 
+// API xử lý submit tất cả
+app.post('/saveConv',checkAuthentication, (req, res) => {
+    const username = req.session.user;
+    const { convName, session, textConv, convItems } = req.body;
+
+    if (!convName || !session || !textConv || !Array.isArray(convItems)) {
+      return res.status(400).send("Dữ liệu không hợp lệ");
+    }
+  
+    db.serialize(() => {
+      // Bước 1: Chèn thông tin vào bảng `conversation`
+      db.run(`INSERT INTO conversation (convename, textconv, session, username) VALUES (?, ?, ?,?)`, [convName, textConv, session,username], function(err) {
+        if (err) {
+          return res.status(500).send("Lỗi lưu dữ liệu vào conversation");
+        }
+  
+        const convId = this.lastID; // Lấy ID của conversation vừa chèn
+  
+        // Bước 2: Chèn từng item vào bảng `conversationitem`
+        const stmt = db.prepare(`INSERT INTO conversationitem (conv_id, sentence, sentence_index) VALUES (?, ?, ?)`);
+  
+        convItems.forEach((item, index) => {
+          stmt.run(convId, item.sentence, item.indexSen);
+        });
+  
+        stmt.finalize((err) => {
+          if (err) {
+            return res.status(500).send("Lỗi lưu dữ liệu vào conversationitem");
+          }
+          console.log(convId)
+          res.json({ success: true, id: convId });
+        });
+      });
+    });
+});
+
+app.get('/conv', (req, res) => {
+    const username = req.session.user;
+    const convId = req.query.id;
+  
+    // Truy vấn dữ liệu từ bảng conversation
+    db.get(`SELECT * FROM conversation WHERE id = ? and username = ?`, [convId, username], (err, convRow) => {
+      if (err) {
+        return res.status(500).send("Lỗi khi lấy dữ liệu từ bảng conversation");
+      }
+  
+      if (!convRow) {
+        return res.status(404).send("Cuộc hội thoại không tồn tại");
+      }
+  
+      // Truy vấn dữ liệu từ bảng conversationitem liên quan đến convId
+      db.all(`SELECT id as itemId, sentence, sentence_index as indexSen FROM conversationitem WHERE conv_id = ?`, [convId], (err, itemRows) => {
+        if (err) {
+          return res.status(500).send("Lỗi khi lấy dữ liệu từ bảng conversationitem");
+        }
+  
+        // Tạo cấu trúc JSON trả về
+        const response = {
+          id: convRow.id,
+          convName: convRow.convename,
+          session: convRow.session,
+          textConv: convRow.textconv,
+          convItems: itemRows 
+        };
+  
+        res.status(200).json(response);
+      });
+    });
+});
+  
+
+// API để lưu thông tin vào bảng conversationitem
+app.post('/api/conversationitem',checkAuthentication,(req, res, next) => {
+    dynamicFolderName = 'conv'; 
+    next();
+}, upload.single('audio'), (req, res,) => {
+    const { convid, sentence, order } = req.body;
+    const audioPath = req.file ? req.file.path : '';
+
+    db.run(`INSERT INTO conversationitem (conv_id, sentence, audio_path, order) VALUES (?, ?, ?, ?)`, [convid, sentence, audioPath, order], function(err) {
+        if (err) {
+            console.error(err.message);
+            return res.json({ success: false, error: err.message });
+        }
+        res.json({ success: true, id: this.lastID });
+    });
+});
+
+const images = [
+    '/uploads/001_EN.PNG',
+    '/uploads/004_EN.PNG',
+];
+
+// API để lấy danh sách hình ảnh
+app.get('/api/images', (req, res) => {
+    res.json(images);
+});
 
 app.listen(3000, () => {
     console.log('Server is running on port 3000');

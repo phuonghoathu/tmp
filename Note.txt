@@ -3,3 +3,7 @@ npm install express-session
 npm install multer
 npm install hashids
 npm install express
+npm install dotenv
+
+
+localhost:3000

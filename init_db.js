@@ -24,7 +24,8 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT,
                 session TEXT,
-                session_encode
+                session_encode,
+                type TEXT
             )`);
     
             db.run(`CREATE TABLE IF NOT EXISTS encoded_data (
@@ -56,21 +57,42 @@ const db = new sqlite3.Database(path.join(__dirname, 'data.db'), (err) => {
                 hintCount INTEGER,
                 point INTEGER
             )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS conversation (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                convename TEXT,
+                textconv TEXT,
+                session TEXT
+              )`);
+              
+            db.run(`CREATE TABLE IF NOT EXISTS conversationitem (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conv_id INTEGER,
+                sentence TEXT,
+                audio_path TEXT default '',
+                sentence_index  INTEGER
+              )`);
+
         } else if(parm[2] == 'data') {
             // Insert dummy users for example purposes
             db.run("INSERT INTO user (username, password, active, last_login) VALUES ('teacher', 'a', 1, NULL)");
             db.run("INSERT INTO user (username, password, active, last_login) VALUES ('user', 'a', 1, NULL)");
 
-            db.run(`INSERT INTO topic (username, session, session_encode)  VALUES ('teacher','Session01','e87120c1b331a44cecc60380e2286978')`);
-            db.run(`INSERT INTO topic (username, session, session_encode)  VALUES ('user','Session01','5e0a9d73ec8c67fd451c879366cb4f98')`);
+            db.run(`INSERT INTO topic (username, session, session_encode,type)  VALUES ('teacher','Session01','e87120c1b331a44cecc60380e2286978','word')`);
+            db.run(`INSERT INTO topic (username, session, session_encode,type)  VALUES ('user','Session01','5e0a9d73ec8c67fd451c879366cb4f98','word')`);
         } else {
            // db.run(`ALTER TABLE words ADD COLUMN audio TEXT default ''`);
            // db.run(`ALTER TABLE encoded_data ADD COLUMN passcode TEXT default ''`);
+
+           
            db.run(`DROP TABLE answer`);
            db.run(`DROP TABLE answerdetail`);
            db.run(`DROP TABLE encoded_data`);
-           //db.run(`ALTER TABLE encoded_data ADD COLUMN name TEXT default ''`);
-        }
+           db.run(`ALTER TABLE topic ADD COLUMN type TEXT default 'word'`);
+           db.run(`INSERT INTO topic (username, session, session_encode,type)  VALUES ('teacher','demo','e87120c1b331a44cecc60380e2286979','conversion')`);
+           db.run(`INSERT INTO topic (username, session, session_encode, type)  VALUES ('user','demo','5e0a9d73ec8c67fd451c879366cb4f99','conversion')`);
+       }
         
         
         

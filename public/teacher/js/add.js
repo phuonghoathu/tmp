@@ -3,7 +3,7 @@ let audioChunks = [];
 let audioBlob;
 
 document.addEventListener("DOMContentLoaded", () => {
-    fetch('/get-sessions')
+    fetch('/get-sessions?type=word')
         .then(response => {
             if (response.status === 401) {
                 showLoginPopup();
@@ -53,36 +53,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-function showLoginPopup() {
-    document.getElementById('loginPopup').style.display = 'block';
-}
-
-function closeLoginPopup() {
-    document.getElementById('loginPopup').style.display = 'none';
-}
-
-function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    fetch('/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                toastr.success('Logged in successfully');
-                closeLoginPopup();
-                window.location.reload();
-            } else {
-                toastr.error(data.message || 'Invalid username or password');
-            }
-        });
-}
 
 function openPopup() {
     document.getElementById('sessionPopup').style.display = 'block';
@@ -188,11 +158,11 @@ function saveSession() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ session: newSessionName })
+        body: JSON.stringify({ session: newSessionName, type:'word' })
     }).then(response => response.json())
         .then(data => {
             if (data.success) {
-                toastr.success('Session mới đã được thêm!');
+                toastr.success('Section mới đã được thêm!');
                 const dropdown = document.getElementById('sessionDropdown');
                 const option = document.createElement('option');
                 option.value = data.session_encode;
@@ -209,7 +179,7 @@ function saveSession() {
 function searchWords() {
     const selectedSession = document.getElementById('sessionDropdown').value;
     if (selectedSession === 'add-session') {
-        toastr.error('Vui lòng chọn một session hợp lệ để tìm kiếm.');
+        toastr.error('Vui lòng chọn một section hợp lệ để tìm kiếm.');
         return;
     }
 
@@ -305,14 +275,14 @@ function searchWords() {
                     wordListBody.appendChild(row);
                 });
             } else {
-                toastr.infor('Không tìm thấy từ nào cho session này.');
+                toastr.infor('Không tìm thấy từ nào cho section này.');
             }
         });
 }
 
 function getLeaningLink() {
     const myLinkInfo = document.getElementById('yourLearingLink');
-    myLinkInfo.textContent = "Your link is " + "http://localhost:3000/" + "learning.html?data=" + document.getElementById('modalSessionLearningDropdown').value
+    myLinkInfo.textContent = "Your link is " + "http://localhost:3000/student/" + "learning.html?data=" + document.getElementById('modalSessionLearningDropdown').value
 }
 function getLink() {
     copySessionDropdownOptions();

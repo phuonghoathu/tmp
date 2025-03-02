@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 async function fetchAnswers(username) {
     const response = await fetch(`/answers?testuser=${username}`);
+    if (response.status === 401) {
+        showLoginPopup();
+    }
     const answers = await response.json();
     const table = document.getElementById('answers-table-body');
     table.innerHTML = '';

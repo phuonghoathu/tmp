@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <link rel="stylesheet" href="css/style_add.css">
+    <link rel="stylesheet" href="css/loginC.css">
 </head>
 
 <body>
@@ -85,7 +86,7 @@
     <div id="sessionPopup" class="popup">
         <div class="popup-content">
             <span class="close" onclick="closePopup()">&times;</span>
-            <h2>Thêm Session mới</h2>
+            <h2>Thêm Section mới</h2>
             <input type="text" id="newSessionName" class="input-single" placeholder="Session Name">
             <button class="button_base" onclick="saveSession()">Save</button>
         </div>
@@ -190,18 +191,19 @@
     </div>
 
     <!-- Login Popup -->
-    <div id="loginPopup" class="popup">
-        <div class="popup-content">
-            <span class="close" onclick="closeLoginPopup()">&times;</span>
+    <div id="loginPopup" class="popup-login">
+        <div class="popup-content-login">
+            <span class="close-login" onclick="closeLoginPopup()">&times;</span>
             <h2>Login</h2>
             <label for="username">Username:</label>
-            <input class="input-single" style="text-align: left;" type="text" id="username"> <br><br>
+            <input class="input-single-login" style="text-align: left;" type="text" id="username_login"> <br><br>
             <label for="password">Password:</label>
-            <input class="input-single" style="text-align: left;" type="password" id="password"><br>
-            <div class="button_getModel"> <button class="button_base" onclick="login()">Login</button></div>
+            <input class="input-single-login" style="text-align: left;" type="password" id="password_login"><br>
+            <div class="button_getModel-login"> <button class="button_base-login" onclick="login()">Login</button></div>
         </div>
     </div>
 
+    <script src="js/loginC.js"></script>
     <script src="js/add.js"></script>
 </body>
 
