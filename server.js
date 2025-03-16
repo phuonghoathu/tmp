@@ -9,6 +9,7 @@ const Hashids = require('hashids/cjs');
 const hashids = new Hashids('my salt', 16);
 const session = require('express-session');
 require('dotenv').config();
+const fs = require('fs');
 let dynamicFolderName = "words";
 
 //var name = 'user_Session01';
@@ -92,8 +93,8 @@ app.get('/add.html', (req, res) => {
 app.post('/add-word', checkAuthentication, upload.fields([{ name: 'audio' }, { name: 'image' }]), (req, res) => {
     const username = req.session.user;
     const { english, vietnamese, session, level, description } = req.body;
-    const imageUrl = req.files.image[0] ? req.files.image[0].filename : null;
-    const audioUrl = req.files.audio[0] ? req.files.audio[0].filename : null;
+    const imageUrl = req.files.image?.[0]?.filename || null;
+    const audioUrl = req.files.audio?.[0]?.filename || null;
 
     const stmt = db.prepare("INSERT INTO words (english, vietnamese, session, username, level, description, imageUrl, audio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     stmt.run(english, vietnamese, session, username, level, description, imageUrl, audioUrl, (err) => {
@@ -170,7 +171,17 @@ app.post('/delete-word', checkAuthentication, (req, res) => {
 
 app.get('/search-words', (req, res) => {
     const session = req.query.keyw;
-    db.all(`SELECT id, english, vietnamese ,level ,description,imageUrl , audio FROM words WHERE session = ?`,
+    db.all(`SELECT id, english, vietnamese ,level ,description,
+        CASE 
+            WHEN imageUrl IS NULL OR imageUrl = '' 
+            THEN NULL 
+            ELSE concat('words/', username, '/', imageUrl) 
+        END AS imageUrl
+     , CASE 
+            WHEN audio IS NULL OR audio = '' 
+            THEN NULL 
+            ELSE concat('words/', username, '/', audio) 
+        END AS audio FROM words WHERE session = ?`,
         [session],
         (err, rows) => {
             if (err) {
@@ -522,11 +533,13 @@ app.post('/saveConv',checkAuthentication, (req, res) => {
 app.get('/conv', (req, res) => {
     const username = req.session.user;
     const convId = req.query.id;
+    console.log(convId);
+    console.log(username);
   
     // Truy vấn dữ liệu từ bảng conversation
     db.get(`SELECT * FROM conversation WHERE id = ? and username = ?`, [convId, username], (err, convRow) => {
-      if (err) {
-        return res.status(500).send("Lỗi khi lấy dữ liệu từ bảng conversation");
+      if (err) {console.log(username);
+        return res.status(500).send(err + "Lỗi khi lấy dữ liệu từ bảng conversation");
       }
   
       if (!convRow) {
@@ -534,7 +547,12 @@ app.get('/conv', (req, res) => {
       }
   
       // Truy vấn dữ liệu từ bảng conversationitem liên quan đến convId
-      db.all(`SELECT id as itemId, sentence, sentence_index as indexSen FROM conversationitem WHERE conv_id = ?`, [convId], (err, itemRows) => {
+      db.all(`SELECT id as itemId, sentence, sentence_index as indexSen ,
+        CASE 
+            WHEN audio_path IS NULL OR audio_path = '' 
+            THEN NULL 
+            ELSE concat('conv/', ?, '/', audio_path) 
+        END AS audioFile FROM conversationitem WHERE conv_id = ?`, [username, convId], (err, itemRows) => {
         if (err) {
           return res.status(500).send("Lỗi khi lấy dữ liệu từ bảng conversationitem");
         }
@@ -559,16 +577,18 @@ app.post('/api/conversationitem',checkAuthentication,(req, res, next) => {
     dynamicFolderName = 'conv'; 
     next();
 }, upload.single('audio'), (req, res,) => {
-    const { convid, sentence, order } = req.body;
-    const audioPath = req.file ? req.file.path : '';
+    const { itemId, sentence } = req.body;
+    const audioPath = req.file ? req.file.filename : '';
+    db.run("UPDATE conversationitem SET sentence = ?,audio_path=?  WHERE id = ?", [sentence ,audioPath, itemId]);
+    res.json({ success: true });
 
-    db.run(`INSERT INTO conversationitem (conv_id, sentence, audio_path, order) VALUES (?, ?, ?, ?)`, [convid, sentence, audioPath, order], function(err) {
-        if (err) {
-            console.error(err.message);
-            return res.json({ success: false, error: err.message });
-        }
-        res.json({ success: true, id: this.lastID });
-    });
+    // db.run(`INSERT INTO conversationitem (conv_id, sentence, audio_path, order) VALUES (?, ?, ?, ?)`, [convid, sentence, audioPath, order], function(err) {
+    //     if (err) {
+    //         console.error(err.message);
+    //         return res.json({ success: false, error: err.message });
+    //     }
+    //     res.json({ success: true, id: this.lastID });
+    // });
 });
 
 const images = [

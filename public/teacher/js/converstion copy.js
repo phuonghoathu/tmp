@@ -1,16 +1,13 @@
 let dataUrl = "";
-let audioChunks = [];
-let audioBlob = [];
-let currentAddButton = null;
 document.addEventListener("DOMContentLoaded", () => {
     const urlParams = new URLSearchParams(window.location.search);
     dataUrl = urlParams.get('data')?urlParams.get('data'):"";
     if(dataUrl != "") {
         processButton = document.getElementById('processButton');
-        processButton.remove(); 
+        processButton.setAttribute("disabled", ""); 
         
-        saveConvButton = document.getElementById('saveConvButton');
-        saveConvButton.remove(); 
+        processButton = document.getElementById('saveConvButton');
+        processButton.removeAttribute("disabled", ""); 
     }
     fetch('/get-sessions?type=conversion')
         .then(response => {
@@ -52,85 +49,27 @@ document.addEventListener("DOMContentLoaded", () => {
                             const row = document.createElement('tr');
                             const sentenceCell = document.createElement('td');
                             sentenceCell.textContent = item.sentence;
-                            sentenceCell.contentEditable = true;
-                            sentenceCell.style.textAlign = 'left';
                             row.appendChild(sentenceCell);
+
                             const infoCell = document.createElement('td');
-                            
-                            // infoCell.innerHTML = `
-                            //     <button id="startRecording" enabled>Start</button> 
-                            //     <button id="stopRecording" enabled>Stop</button> 
-                            //     <input type="file" class="audio-upload" enabled />
-                            //     <audio controls></audio>`;
-                            const startRecording = document.createElement('button');
-                            startRecording.textContent = 'Start';
-                            startRecording.id = 'startRecording' + item.itemId;
-                            infoCell.appendChild(startRecording);
+                            infoCell.innerHTML = `
+                                <button id="startRecording" enabled>Start Recording</button> 
+                                <button id="stopRecording" enabled>Stop Recording</button> 
+                                <input type="file" class="audio-upload" enabled />
+                                <audio controls></audio>`;
 
-                            const stopRecording = document.createElement('button');
-                            stopRecording.textContent = 'Stop';
-                            stopRecording.id = 'stopRecording' + item.itemId;
-                            infoCell.appendChild(stopRecording);
-
-                            //<audio id="audio-playback" controls></audio>
-                            const audioRecording = document.createElement('audio');
-                            audioRecording.id = 'audio-playback' + item.itemId;
-                            audioRecording.controls = true;
-                            if(item.audioFile) {
-                                audioRecording.src = "/uploads/" + item.audioFile;
-                                infoCell.appendChild(audioRecording);
-                                startRecording.disabled = true;
-                                stopRecording.disabled = true;
-                            } else {
-                                infoCell.appendChild(audioRecording);
-
-                                startRecording.addEventListener('click', async () => {
-                                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                                    mediaRecorder = new MediaRecorder(stream);
-                                    mediaRecorder.start();
-                                
-                                    mediaRecorder.addEventListener('dataavailable', event => {
-                                        audioChunks.push(event.data);
-                                    });
-                                
-                                    mediaRecorder.addEventListener('stop', () => {
-                                        audioBlob[item.itemId] = new Blob(audioChunks, { type: 'audio/wav' });
-                                        const audioUrl = URL.createObjectURL(audioBlob[item.itemId]);
-                                        document.getElementById('audio-playback'+ item.itemId).src = audioUrl;
-                                
-                                        audioChunks = [];
-                                       // document.getElementById('upload-recording').disabled = false;
-                                    });
-                                
-                                    document.getElementById('startRecording' + item.itemId).disabled = true;
-                                    document.getElementById('stopRecording' + item.itemId).disabled = false;
-                                });
-                                
-                                stopRecording.addEventListener('click', () => {
-                                    mediaRecorder.stop();
-                                    document.getElementById('startRecording' + item.itemId).disabled = false;
-                                    document.getElementById('stopRecording' + item.itemId).disabled = true;
-                                });
-                            }
-                            
                             row.appendChild(infoCell);
 
                             const actionsCell = document.createElement('td');
                             const submitButton = document.createElement('button');
                             submitButton.textContent = 'Submit';
-                            submitButton.className = "submitBtn";
                             submitButton.disabled = false;
                             submitButton.addEventListener('click', () => {
-                               // const audioFileInput = row.querySelector('.audio-upload');
-                              // const audioFileInput = document.getElementById('imageUpload').files[0]
+                                const audioFileInput = row.querySelector('.audio-upload');
                                 const formData = new FormData();
                                 formData.append('sentence', sentenceCell.textContent);
-                                formData.append('itemId', item.itemId);
-                                if(audioBlob[item.itemId]) {
-                                    //formData.append('audio', audioFileInput.files[0]);
-                                    formData.append('audio', audioBlob[item.itemId], 'audio.wav');
-                                }
-                               // formData.append('order', indexSen);
+                                formData.append('audio', audioFileInput.files[0]);
+                                formData.append('order', index);
 
                                 fetch('/api/conversationitem', {
                                     method: 'POST',
@@ -153,7 +92,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
                             const deleteButton = document.createElement('button');
                             deleteButton.textContent = 'Delete';
-                            deleteButton.className = "deleteBtn";
                             deleteButton.addEventListener('click', () => {
                                 // call delete API
                             });
@@ -163,42 +101,25 @@ document.addEventListener("DOMContentLoaded", () => {
                             tbody.appendChild(row);
 
                             sentenceCell.addEventListener('mouseup', (e) => {
-                                // Thêm sự kiện click vào sentenceCell
-                                //sentenceCell.addEventListener('click', (e) => {
-                                    const selectedText = window.getSelection().toString();
-                                    if (selectedText) {
-                                        // Tạo button ADD
-                                        const addButton = document.createElement('button');
-                                        addButton.textContent = 'ADD';
-                                        addButton.style.position = 'absolute';
-                                        addButton.style.left = `${e.pageX}px`;
-                                        addButton.style.top = `${e.pageY}px`;
-                                        document.body.appendChild(addButton);
-                                        
-                                        // Thêm sự kiện click vào button ADD
-                                        addButton.addEventListener('click', () => {
-                                            document.getElementById('english').value = selectedText; // Set value of vietnamese input to selected text
-                                            document.getElementById('modal').classList.remove('hidden');
-                                            document.body.removeChild(addButton); // Remove the button ADD after clicking
-                                        });
-                                        
-                                        // Ẩn đi nút ADD hiện tại
-                                        if (currentAddButton) {
-                                            document.body.removeChild(currentAddButton);
-                                        }
-                                        
-                                        // Cập nhật nút ADD hiện tại
-                                        currentAddButton = addButton;
-                                        
-                                        // Thêm sự kiện click vào document.body để ẩn đi nút ADD
-                                        document.body.addEventListener('click', (e) => {
-                                            if (e.target !== addButton && e.target !== sentenceCell) {
-                                                document.body.removeChild(addButton);
-                                                currentAddButton = null;
-                                            }
-                                        });
-                                    }
-                               // });
+                                const selectedText = window.getSelection().toString();
+                                if (selectedText) {
+                                    const contextMenu = document.createElement('ul');
+                                    const menuItem = document.createElement('li');
+                                    
+                                    menuItem.textContent = 'How to read';
+                                    menuItem.style.backgroundColor = 'green'; // Thêm màu nền
+
+                                    menuItem.addEventListener('click', () => {
+                                        document.getElementById('english').value = selectedText; // Set value of vietnamese input to selected text
+                                        document.getElementById('modal').classList.remove('hidden');
+                                        document.body.removeChild(contextMenu); // Remove the context menu after clicking
+                                    });
+                                    contextMenu.appendChild(menuItem);
+                                    document.body.appendChild(contextMenu);
+                                    contextMenu.style.position = 'absolute';
+                                    contextMenu.style.left = `${e.pageX}px`;
+                                    contextMenu.style.top = `${e.pageY}px`;
+                                }
                             });
                         });
                     })
